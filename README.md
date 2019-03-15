@@ -7,7 +7,7 @@ You can text yourself from a telegram bot using this method.
 ## Creating a telegram bot
 You can create a bot through [@BotFather](https://telegram.me/BotFather)
 
-## Finding chat ID
+## Finding the chat ID
 You can learn about your chat ID by messaging `/my_id` to the [@get_id_bot](https://telegram.me/get_id_bot) on telegram.
 
 ## Usage

@@ -16,7 +16,7 @@ from telegram_api import *
 
 BOT_TOKEN = 'your bot token here'
 CHAT_ID = 'your chat id here'
-PATH = '/home/username/Documents/'
+PATH = '/home/username/Documents/' # must be absolute path
 
 # \n works in messages/captions
 telegram_text('This sends a message', CHAT_ID, TELEGRAM_TOKEN)

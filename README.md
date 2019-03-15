@@ -1,6 +1,5 @@
 # Welcome!
-Ever wanted to see the output of your program that runs 24/7 while you're away from home?  
-Now you can!
+You can text yourself from a telegram bot using this method.
 
 ## Dependencies
 - curl

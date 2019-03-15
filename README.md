@@ -23,6 +23,6 @@ telegram_text('This sends a message', CHAT_ID, TELEGRAM_TOKEN)
 
 # if you don't want to write a caption, just leave it empty
 telegram_file('Caption here', 'example.zip', PATH, CHAT_ID, BOT_TOKEN)
-telegram_image('Caption here', 'somepic.jpg', PATH, CHAT_ID, BOT_TOKEN)
-telegram_video('Caption here', 'somevideo.mp4', PATH, CHAT_ID, BOT_TOKEN)
+telegram_image('Caption here', 'some pic.jpg', PATH, CHAT_ID, BOT_TOKEN)
+telegram_video('Caption here', 'some video.mp4', PATH, CHAT_ID, BOT_TOKEN)
 ```

@@ -2,7 +2,7 @@
 You can text yourself from a telegram bot using this method.
 
 ## Dependencies
-- curl
+- requests
 
 ## Creating a telegram bot
 You can create a bot through [@BotFather](https://telegram.me/BotFather)
@@ -14,15 +14,11 @@ You can learn about your chat ID by messaging `/my_id` to the [@get_id_bot](http
 ```python
 from telegram_api import *
 
-BOT_TOKEN = 'your bot token here'
+TOKEN = 'your bot token here'
 CHAT_ID = 'your chat id here'
-PATH = '/home/username/Documents/' # must be absolute path
 
-# \n works in messages/captions
-telegram_text('This sends a message', CHAT_ID, TELEGRAM_TOKEN)
-
-# if you don't want to write a caption, just leave it empty
-telegram_file('Caption here', 'example.zip', PATH, CHAT_ID, BOT_TOKEN)
-telegram_image('Caption here', 'some pic.jpg', PATH, CHAT_ID, BOT_TOKEN)
-telegram_video('Caption here', 'some video.mp4', PATH, CHAT_ID, BOT_TOKEN)
+telegram_text(text = 'hi', token = TOKEN, chat_id = CHAT_ID)
+telegram_doc(caption = 'test file', file = open('test.pdf', 'rb'), token = TOKEN, chat_id = CHAT_ID)
+telegram_pic(caption = 'test picture', file = open('test.jpg', 'rb'), token = TOKEN, chat_id = CHAT_ID)
+telegram_video(caption = 'test video', file = open('test.mp4', 'rb'), token = TOKEN, chat_id = CHAT_ID)
 ```

@@ -1,8 +1,8 @@
 from requests import post
 from urllib.parse import quote as qt
 
-def telegram_text(txt, token, chat_id):
-    post('https://api.telegram.org/bot' + token + '/sendMessage?chat_id=' + chat_id + '&text=' + qt(txt))
+def telegram_text(text, token, chat_id):
+    post('https://api.telegram.org/bot' + token + '/sendMessage?chat_id=' + chat_id + '&text=' + qt(text))
 
 def telegram_pic(file, token, chat_id, caption = None):
     if caption:

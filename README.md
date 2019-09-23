@@ -11,6 +11,9 @@ You can create a bot through [@BotFather](https://telegram.me/BotFather)
 You can learn about your chat ID by messaging `/my_id` to the [@get_id_bot](https://telegram.me/get_id_bot) on telegram.
 
 ## Usage
+
+Captions are optional, you can just upload files without them as well.
+
 ```python
 from telegram_api import *
 

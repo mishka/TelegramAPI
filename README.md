@@ -12,7 +12,7 @@ You can learn about your chat ID by messaging `/my_id` to the [@get_id_bot](http
 
 ## Usage
 
-Captions are optional, you can just upload files without them as well.
+**Captions are optional, you can just upload files without them as well.**
 
 ```python
 from telegram_api import *

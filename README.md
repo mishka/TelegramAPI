@@ -10,9 +10,18 @@ You can create a bot through [@BotFather](https://telegram.me/BotFather)
 ## Finding the chat ID
 You can learn about your chat ID by messaging `/my_id` to the [@get_id_bot](https://telegram.me/get_id_bot) on telegram.
 
-## Usage
+## Important note on filetypes
+[Current available filetypes:](https://core.telegram.org/bots/api#available-methods)  
+**Audio**, **Voice**  
+**Photo**, **Video**, **Animation**  
+**Document**  
+ 
 
-**Captions are optional, you can just upload files without them as well.**
+
+## Usage  
+
+
+**You MUST define the filetype if you're uploading a file.**
 
 ```python
 from telegram_api import *
@@ -20,8 +29,12 @@ from telegram_api import *
 TOKEN = 'your bot token here'
 CHAT_ID = 'your chat id here'
 
-telegram_text(text = 'hi', token = TOKEN, chat_id = CHAT_ID)
-telegram_doc(caption = 'test file', file = open('test.pdf', 'rb'), token = TOKEN, chat_id = CHAT_ID)
-telegram_pic(caption = 'test picture', file = open('test.jpg', 'rb'), token = TOKEN, chat_id = CHAT_ID)
-telegram_video(caption = 'test video', file = open('test.mp4', 'rb'), token = TOKEN, chat_id = CHAT_ID)
+# Just to send a text message, simply;
+telegram(text = 'hi', token = TOKEN, chat_id = CHAT_ID)
+
+# Upload a file without text/caption;
+telegram(file = open('test.pdf', 'rb'), filetype = 'Document', token = TOKEN, chat_id = CHAT_ID)
+
+# Upload a file with text/caption;
+telegram(text = 'a test file', file = open('test.mp4', 'rb'), filetype = 'Video', token = TOKEN, chat_id = CHAT_ID)
 ```

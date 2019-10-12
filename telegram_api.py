@@ -1,23 +1,10 @@
 from requests import post
 from urllib.parse import quote as qt
 
-def telegram_text(text, token, chat_id):
-    post('https://api.telegram.org/bot' + token + '/sendMessage?chat_id=' + chat_id + '&text=' + qt(text))
-
-def telegram_pic(file, token, chat_id, caption = None):
-    if caption:
-        post('https://api.telegram.org/bot' + token + '/sendPhoto?chat_id=' + chat_id + '&caption=' + qt(caption), files = {'photo': file})
-    else:
-        post('https://api.telegram.org/bot' + token + '/sendPhoto?chat_id=' + chat_id, files = {'photo': file})
-
-def telegram_video(file, token, chat_id, caption = None):
-    if caption:
-        post('https://api.telegram.org/bot' + token + '/sendVideo?chat_id=' + chat_id + '&caption=' + qt(caption), files = {'video': file})
-    else:
-        post('https://api.telegram.org/bot' + token + '/sendVideo?chat_id=' + chat_id, files = {'video': file})
-
-def telegram_doc(file, token, chat_id, caption = None):
-    if caption:
-        post('https://api.telegram.org/bot' + token + '/sendDocument?chat_id=' + chat_id + '&caption=' + qt(caption), files = {'document': file})
-    else:
-        post('https://api.telegram.org/bot' + token + '/sendDocument?chat_id=' + chat_id, files = {'document': file})
+def telegram(token, chat_id, text = None, file = None, filetype = None):
+    if text and file == None:
+        post(f'https://api.telegram.org/bot{token}/sendMessage?chat_id={chat_id}&text={qt(text)}&parse_mode=markdown')
+    elif file and filetype and text == None:
+        post(f'https://api.telegram.org/bot{token}/send{filetype}?chat_id={chat_id}', files = {filetype.lower(): file})
+    elif text and file and filetype:
+        post(f'https://api.telegram.org/bot{token}/send{filetype}?chat_id={chat_id}&caption={qt(text)}&parse_mode=markdown', files = {filetype.lower(): file})

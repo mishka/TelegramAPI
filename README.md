@@ -1,12 +1,12 @@
 # Welcome!
-You can run a Telegram bot, get all the message data in a parsed way, download any attachments, send messages and attachments using this library.  
+You can run a Telegram bot, get all the message data in a parsed way, download any attachments, and send messages and attachments using this library.
 
-I felt the need to code something like this, because I grew tired of all the version updates, and constant rewrites of the popular libraries.  
+I felt the need to code something like this because I grew tired of all the popular libraries' version updates and constant rewrites.
 
-I don't have time to relearn the library, and read docs every time I build bots.  
+I don't have time to relearn the libraries and read docs whenever I build bots.
 
-If you need to automate a bot, and get something done very quickly, this library is probably what you are searching for.  
-  
+If you need to automate a bot and get something done quickly, this library is what you are searching for.
+
 It is currently in progress. I've written the parsing and downloading the attachments so far. I will be working on sending data back whenever I have free time to do so.
 
 ## Dependencies

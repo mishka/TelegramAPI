@@ -267,32 +267,31 @@ class TelegramAPI:
             params.update({'protect_content': True})
         
         # Contact card information
-        if contact_number:
+        if contact_number and contact_first_name:
             params.update({'phone_number': contact_number})
-        if contact_first_name:
             params.update({'first_name': contact_first_name})
-        if contact_last_name:
-            params.update({'last_name': contact_last_name})
-        if contact_vcard:
-            params.update({'vcard': contact_vcard})
+            if contact_last_name:
+                params.update({'last_name': contact_last_name})
+            if contact_vcard:
+                params.update({'vcard': contact_vcard})
 
         # Geo information for sending locations
         if latitude and longitude:
             params.update({'latitude': latitude, 'longitude': longitude})
-        if horizontal_accuracy:
-            params.update({'horizontal_accuracy': horizontal_accuracy})
-        if live_period:
-            params.update({'live_period': live_period})
-        if heading:
-            params.update({'heading': heading})
-        if proximity_alert_radius:
-            params.update({'proximity_alert_radius': proximity_alert_radius})
+            if horizontal_accuracy:
+                params.update({'horizontal_accuracy': horizontal_accuracy})
+            if live_period:
+                params.update({'live_period': live_period})
+            if heading:
+                params.update({'heading': heading})
+            if proximity_alert_radius:
+                params.update({'proximity_alert_radius': proximity_alert_radius})
 
         # Voice message information
         if voice:
             files.update({'voice': voice})
-        if voice_duration:
-            params.update({'duration': voice_duration})
+            if voice_duration:
+                params.update({'duration': voice_duration})
 
         response = requests.post(url, params=params, files=files)
         print(response)

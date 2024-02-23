@@ -17,7 +17,6 @@ class TelegramAPI:
         self.current_directory = join(getcwd(), '')
         self.last_update_id = None
         self.parser = Parser()
-        self.my_id = 639236393
 
 
     def convert_timestamp(self, timestamp:Union[str, int]):

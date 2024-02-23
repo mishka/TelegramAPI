@@ -20,7 +20,7 @@ class TelegramAPI:
         self.my_id = 639236393
 
 
-    def convert_timestamp(self, timestamp):
+    def convert_timestamp(self, timestamp:Union[str, int]):
         """
         Converts a Unix timestamp to the user's local time in the format 'dd/mm/YYYY HH:MM:SS'.
 
@@ -53,7 +53,7 @@ class TelegramAPI:
         return updates
 
 
-    def poll_updates(self, polling_interval=1):
+    def poll_updates(self, polling_interval:int=1):
         """
         Continuously polls for the latest updates and yields the processed results.
 
@@ -74,7 +74,7 @@ class TelegramAPI:
             time.sleep(polling_interval)
 
 
-    def download_attachment(self, file_id, file_name, download_path):
+    def download_attachment(self, file_id:str, file_name:str, download_path:str) -> bool:
         """
         Downloads an attachment identified by its file ID from Telegram and saves it to the specified path.
 
@@ -238,6 +238,7 @@ class TelegramAPI:
             silent=silent,
             protect_content=protect_content
             )
+
 
     # in progress
     def send(self, url, chat_id, text=None, caption=None, reply_to_message_id=None, parse_mode=None, silent=None, protect_content=None,

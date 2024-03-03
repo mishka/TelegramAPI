@@ -4,9 +4,22 @@ from TelegramTypes import Sticker, Animation
 
 class Parser:
     def process(self, message):
+            # GET one
             message_data = message.get('message', {})
+            # GET but if the content is updated/edited
             if not message_data:
                 message_data = message.get('edited_message', {})
+            # POST one
+            if not message_data:
+                message_data = message.get('result', {})
+                # ducktape fix for sendMediaGroup.
+
+                # if you upload 3 items, you get 3 responses back within a list.
+                # for now i send the first one back.
+                # i will have to scale this out for messages with many items within
+                if str(message_data).startswith('['):
+                    message_data = message_data[-1]
+        
             from_data = message_data.get('from', {})
             chat_data = message_data.get('chat', {})
             video_data = message_data.get('video', {})

@@ -1,33 +1,203 @@
 # Welcome!
-You can run a Telegram bot, get all the message data in a parsed way, download any attachments, and send messages and attachments using this library.
+You can run a Telegram bot, get all the message data in a parsed way, download any attachments, and send messages and attachments using this library.  
 
-I felt the need to code something like this because I grew tired of all the popular libraries' version updates and constant rewrites.
+If you need to automate a bot and get something done quickly, this library is what you are searching for.  
 
-I don't have time to relearn the libraries and read docs whenever I build bots.
-
-If you need to automate a bot and get something done quickly, this library is what you are searching for.
-
-It is currently in progress. I've written the parsing and downloading the attachments so far. I will be working on sending data back whenever I have free time to do so.
-
+The file sending is unexceptionally simplified. You only need to enter the file path, or a valid URL that telegram can fetch it from.
+  
+It is currently in progress; however, it can already achieve the following:
+- Polling messages
+- Message information is parsed in a pythonic way
+- Endpoints which are covered for sending messages:
+  - Text
+  - Contact
+  - Location
+  - Document
+  - Photo
+  - Video
+  - Audio
+  - Voice
+  - Contact
+  - Media Groups
+- Delete messages
+  
+# Basics
 ## Dependencies
 - requests
-
-## Creating a telegram bot
+## Creating a bot
 You can create a bot through [@BotFather](https://telegram.me/BotFather)
 
 ## Finding the chat ID
 You can learn about your chat ID by messaging `/my_id` to the [@get_id_bot](https://telegram.me/get_id_bot) on telegram.
+Or, you can send your bot a message, and access this URL to see the updates coming through to your bot to see your user ID: https://api.telegram.org/YourTokenHere/getUpdates
 
-## Example Usage  
+# Some Code Examples
 
-**All the available methods are shown below for receiving the parsed data. I will be writing a proper documentation once I am done with coding the whole thing.**
+**As you write function names in your IDE, you will see the available parameters for all of them.  
+They are all documented alongside with their functionality and accepted data types.  
+These are just some basic examples to give you an idea about the library.**
 
+## Importing the library and setting up your telegram object
 ```python
 from TelegramAPI import TelegramAPI
 
-telegram = TelegramAPI('Your Token Here')
+telegram = TelegramAPI('Enter your bot token here. You can obtain it through @BotFather on telegram.')
+```
 
-for message in telegram.poll_updates():
+## Sending a text message
+```python
+telegram.send_message(
+    chat_id = 'Your ID here',
+    text = 'You can visit my GitHub account here: github.com/mishka',
+    no_webpage = True,
+    disable_notification = True
+    )
+```
+
+## Sending a contact
+```python
+telegram.send_contact(
+    chat_id = 'Your ID here',
+    first_name = 'First name of the contact',
+    last_name = 'Last name of the contact',
+    phone_number = '+1234567890'
+    )
+```
+
+## Sending a location
+```python
+telegram.send_location(
+    chat_id = 'Your ID here',
+    latitude = 29.9792,
+    longitude = 31.1342,
+    horizontal_accuracy = 50,
+    heading = 90
+    )
+```
+
+## Sending a voice
+```python
+telegram.send_voice(
+    chat_id = 'Your ID here',
+    voice = 'path to voice file or valid url',
+    duration = 7,
+    caption = 'Check out this voice message!'
+    )
+```
+
+## Sending an audio
+```python
+# Sending a single audio
+telegram.send_audio(
+    chat_id = 'Your ID here',
+    audio = 'path to audio file or valid url',
+    performer = 'Artist Name',
+    title = 'Song Name',
+    thumbnail = '/path/to/album/cover/picture'
+    )
+```
+
+## Sending multiple audios
+```python
+# Sending more than one audio
+# It currently does not support metadata when it is sent in groups
+telegram.send_audio(
+    chat_id = 'Your ID here',
+    audio = ['song path 1', 'song path 2', 'song path 3']
+    )
+```
+
+## Sending a photo
+```python
+telegram.send_photo(
+    chat_id = 'Your ID here',
+    caption = 'Check this cool picture!',
+    photo = 'path to file or a valid url',
+    has_spoilers = True
+    )
+```
+
+## Sending multiple photos
+```python
+telegram.send_photo(
+    chat_id = 'Your ID here',
+    caption = 'Check these cool pictures!',
+    photo = ['path to photo', 'photo url'],
+    protect_content = True
+    )
+```
+
+## Sending a video
+```python
+telegram.send_video(
+    chat_id = 'Your ID here',
+    caption = 'Check this cool video!',
+    video = 'path to file or a valid url',
+    supports_streaming = True
+    )
+```
+
+## Sending multiple videos
+```python
+telegram.send_video(
+    chat_id = 'Your ID here',
+    caption = 'Check these cool videos!',
+    video = ['path to video', 'video url'],
+    protect_content = True
+    )
+```
+
+## Sending a document
+```python
+telegram.send_document(
+    chat_id = 'Your ID here',
+    caption = 'Check this cool document!',
+    video = 'path to file or valid url',
+    protect_content = True
+    )
+```
+
+## Sending multiple documents
+```python
+# If you want to send many files, use this method.
+telegram.send_document(
+    chat_id = 'Your ID here',
+    caption = 'Check these cool files!',
+    video = ['audio file path', 'photo url', 'video file path', 'a custom file url'],
+    protect_content = True
+    )
+```
+
+## Deleting a message
+```python
+from time import sleep
+
+message = telegram.send_message(chat_id = 'ID, text = 'Hi!')
+sleep(5)
+telegram.delete_message(chat_id = 'ID', message_id = message.id)
+```
+
+## Replying to messages or commands from users
+```python
+# I am thinking about adding decorators to this library, and further simplying this process.
+# For now, you can poll the updates, and listen to them in a loop. and add conditions inside that loop.
+
+for message in telegram.poll_updates(polling_interval=1):
+    if message.text.startswith('/ping'):
+        telegram.send_message(
+            chat_id = message.from_id,
+            text = '*pong!*'
+            reply_to_message_id = message.message_id,
+            parse_mode = 'Markdown'
+        )
+```
+
+## Polling, accessing the parsed data, and downloading attachments!
+```python
+# You can see all the available information that comes with user messages below.
+
+# You can set the polling interval while setting it up. Default value is 1.
+for message in telegram.poll_updates(polling_interval=5): 
     print(f'Update ID: {message.update_id}')
     print(f'Message ID: {message.message_id}')
 

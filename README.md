@@ -20,6 +20,7 @@ It is currently in progress; however, it can already achieve the following:
   - Contact
   - Media Groups
 - Delete messages
+- Edit messages
   
 # Basics
 ## Dependencies
@@ -172,9 +173,19 @@ telegram.send_document(
 ```python
 from time import sleep
 
-message = telegram.send_message(chat_id = 'ID, text = 'Hi!')
+message = telegram.send_message(chat_id = 'ID', text = 'Hi!')
 sleep(5)
 telegram.delete_message(chat_id = 'ID', message_id = message.id)
+```
+
+## Editing a message
+```python
+telegram.send_message(
+    chat_id = 098765,
+    message_id = 123456,
+    text = 'Hi!',
+    parse_mode = 'Markdown'
+    )
 ```
 
 ## Replying to messages or commands from users

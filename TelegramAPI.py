@@ -315,34 +315,6 @@ class TelegramAPI:
             return self.post_media_group(chat_id = chat_id, mtype = 'photo', media = photo, caption = caption, reply_to_message_id = reply_to_message_id, disable_notification = disable_notification, protect_content = protect_content)
 
 
-    def send_message(self, chat_id:Union[str, int], text: str, reply_to_message_id: int = None, parse_mode: str = None, no_webpage: bool = False, disable_notification: bool = False, protect_content: bool = False):
-        """
-        Sends a text message to the specified chat.
-
-        Parameters:
-        - chat_id: Unique identifier for the target chat or username of the target channel (in the format @channelusername).
-        - text: The text of the message to be sent.
-        - reply_to_message_id: The message ID to which this message will reply to.
-        - parse_mode: Mode for parsing entities in the message text. 'Markdown' or 'HTML'.
-        - no_webpage: Set this flag to disable the generation of the webpage preview.
-        - disable_notification: Sends the message silently. Users will receive a notification with no sound.
-        - protect_content: Protects the contents of the sent message from forwarding and saving.
-
-        Example:
-        bot.send_message(chat_id='ID or @channel', text='*Hello, World!*', parse_mode='Markdown', no_webpage=True, disable_notification=True)
-        """
-        return self.post(
-            url = f'https://api.telegram.org/bot{self.token}/sendMessage',
-            chat_id = chat_id,
-            text = text,
-            reply_to_message_id = reply_to_message_id,
-            parse_mode = parse_mode,
-            no_webpage = no_webpage,
-            disable_notification = disable_notification,
-            protect_content = protect_content
-        )
-
-
     def send_contact(self, chat_id: Union[str, int], phone_number: str, first_name: str, last_name: str = None, vcard: str = None, disable_notification: bool = False, protect_content: bool = False):
         """
         Sends a contact to the specified chat or channel.
@@ -386,7 +358,7 @@ class TelegramAPI:
         - proximity_alert_radius: For live locations, a maximum distance for proximity alerts about approaching another chat member, in meters. Must be between 1 and 100000 if specified.
         - disable_notification: Sends the message silently. Users will receive a notification with no sound.
         - reply_to_message_id: Quotes and replies to the message ID.
-        - protect_content: Protects the contents of the sent voice message from forwarding and saving.
+        - protect_content: Protects the contents of the sent message from forwarding and saving.
 
         Example:
         bot.send_location(chat_id='ID or @channel', latitude=37.7749, longitude=-122.4194, horizontal_accuracy=50, live_period=300, heading=90, proximity_alert_radius=1000, disable_notification=True, reply_to_message_id=123456789)
@@ -421,7 +393,7 @@ class TelegramAPI:
         - protect_content: Protects the contents of the sent voice message from forwarding and saving.
 
         Example:
-        bot.send_voice(chat_id='ID or @channel', voice_path='/path/to/voice.ogg', duration=10, caption='Check out this voice message!', reply_to_message_id=123456789, disable_notification=True)
+        bot.send_voice(chat_id='ID or @channel', voice='/path/to/voice.ogg', duration=10, caption='Check out this voice message!', reply_to_message_id=123456789, disable_notification=True)
         """
         return self.post(
             url = f'https://api.telegram.org/bot{self.token}/sendVoice',
@@ -431,6 +403,34 @@ class TelegramAPI:
             caption = caption,
             parse_mode = parse_mode,
             reply_to_message_id = reply_to_message_id,
+            disable_notification = disable_notification,
+            protect_content = protect_content
+        )
+
+
+    def send_message(self, chat_id:Union[str, int], text: str, reply_to_message_id: int = None, parse_mode: str = None, no_webpage: bool = False, disable_notification: bool = False, protect_content: bool = False):
+        """
+        Sends a text message to the specified chat.
+
+        Parameters:
+        - chat_id: Unique identifier for the target chat or username of the target channel (in the format @channelusername).
+        - text: The text of the message to be sent.
+        - reply_to_message_id: The message ID to which this message will reply to.
+        - parse_mode: Mode for parsing entities in the message text. 'Markdown' or 'HTML'.
+        - no_webpage: Set this flag to disable the generation of the webpage preview.
+        - disable_notification: Sends the message silently. Users will receive a notification with no sound.
+        - protect_content: Protects the contents of the sent message from forwarding and saving.
+
+        Example:
+        bot.send_message(chat_id='ID or @channel', text='*Hello, World!*', parse_mode='Markdown', no_webpage=True, disable_notification=True)
+        """
+        return self.post(
+            url = f'https://api.telegram.org/bot{self.token}/sendMessage',
+            chat_id = chat_id,
+            text = text,
+            reply_to_message_id = reply_to_message_id,
+            parse_mode = parse_mode,
+            no_webpage = no_webpage,
             disable_notification = disable_notification,
             protect_content = protect_content
         )
@@ -449,6 +449,27 @@ class TelegramAPI:
         """
         return self.post(url = f'https://api.telegram.org/bot{self.token}/deleteMessage', chat_id = chat_id, message_id = message_id)
 
+
+    def edit_message(self, chat_id: Union[int, str], message_id: Union[int, str], text: str, parse_mode: str = None, no_webpage: bool = False):
+        """
+        Updates the given message with the new text.
+
+        Parameters:
+        - chat_id: Unique identifier for the target chat or username of the target channel (in the format @channelusername).
+        - message_id: The ID of the message you wish to edit.
+        - text: The text of the message to be sent.
+
+        Example:
+        bot.edit_message(chat_id = 123456789, message_id = 1235, text = 'This is an updated text!')
+        """
+        return self.post(
+            url = f'https://api.telegram.org/bot{self.token}/editMessageText',
+            chat_id = chat_id,
+            message_id = message_id,
+            text = text,
+            parse_mode = parse_mode,
+            no_webpage = no_webpage
+        )
 
 
     def post(self, url, chat_id, message_id=None, text=None, caption=None, reply_to_message_id=None, parse_mode=None, disable_notification=None, protect_content=None,

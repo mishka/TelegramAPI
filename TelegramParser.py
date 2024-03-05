@@ -19,7 +19,10 @@ class Parser:
                 # i will have to scale this out for messages with many items within
                 if str(message_data).startswith('['):
                     message_data = message_data[-1]
-        
+
+            if type(message_data) == bool:
+                return
+
             from_data = message_data.get('from', {})
             chat_data = message_data.get('chat', {})
             video_data = message_data.get('video', {})

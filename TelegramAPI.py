@@ -8,6 +8,7 @@ from urllib.parse import urlparse
 
 from datetime import datetime, timezone
 from typing import Union
+from io import BytesIO
 
 from TelegramParser import Parser
 
@@ -22,8 +23,10 @@ class TelegramAPI:
         self.parser = Parser()
 
 
-    def is_url(self, url: str) -> bool:
+    def is_url(self, url: Union[str, bytes]) -> bool:
         """Check if the given string is a URL. Returns True if the input is an URL, and False otherwise."""
+        if isinstance(url, bytes):
+            return False
         parsed = urlparse(url)
         return bool(parsed.scheme and parsed.netloc)
 
@@ -196,8 +199,8 @@ class TelegramAPI:
             return self.post_media_group(chat_id = chat_id, mtype = 'document', media = document, caption = caption, reply_to_message_id = reply_to_message_id, disable_notification = disable_notification, protect_content = protect_content)
 
 
-    def send_audio(self, chat_id: Union[int, str], audio: Union[str, list], caption: str = None, reply_to_message_id: int = None, parse_mode: str = None,
-                duration: int = None, performer: str = None, title: str = None, thumbnail: str = None, disable_notification: bool = False, protect_content: bool = False):
+    def send_audio(self, chat_id: Union[int, str], audio: Union[str, bytes, list], caption: str = None, reply_to_message_id: int = None, parse_mode: str = None, byte: bool = False,
+                duration: int = None, performer: str = None, title: str = None, thumbnail: Union[str, bytes] = None, disable_notification: bool = False, protect_content: bool = False):
         """
         Sends an audio file or a list of audio files to the specified chat.
 
@@ -217,7 +220,7 @@ class TelegramAPI:
         Example:
         bot.send_audio(chat_id='@example_channel', audio='/path/to/audio.mp3', caption='Check out this audio!', reply_to_message_id=123456789, duration=180, performer='Artist', title='Song Title', disable_notification=False)
         """
-        if isinstance(audio, str):
+        if isinstance(audio, (str, bytes)):
             return self.post(
                 url = f'https://api.telegram.org/bot{self.token}/sendAudio',
                 chat_id = chat_id,
@@ -230,7 +233,8 @@ class TelegramAPI:
                 title = title,
                 thumbnail = thumbnail,
                 disable_notification = disable_notification,
-                protect_content = protect_content
+                protect_content = protect_content,
+                byte = byte
             )
         elif isinstance(audio, list):
             return self.post_media_group(chat_id = chat_id, mtype = 'audio', media = audio, caption = caption, reply_to_message_id = reply_to_message_id, disable_notification = disable_notification, protect_content = protect_content)
@@ -300,7 +304,7 @@ class TelegramAPI:
         bot.send_photo(chat_id='@example_channel', photo='/path/to/photo.jpg', caption='Check out this photo!', reply_to_message_id=123456789, has_spoiler=True)
         """
         if isinstance(photo, str):
-            return self.send(
+            return self.post(
                 url = f'https://api.telegram.org/bot{self.token}/sendPhoto',
                 chat_id = chat_id,
                 photo = photo,
@@ -476,7 +480,7 @@ class TelegramAPI:
              no_webpage=None, contact_number=None, contact_first_name=None, contact_last_name=None, contact_vcard=None, voice=None, duration=None,
              latitude=None, longitude=None, horizontal_accuracy=None, live_period=None, heading=None, proximity_alert_radius=None, photo = None, has_spoiler = None,
              video = None, width = None, height = None, thumbnail = None, supports_streaming = None, disable_content_type_detection = None, document = None,
-             audio = None, performer = None, title = None, media_group = None, media_files = None):
+             audio = None, performer = None, title = None, media_group = None, media_files = None, byte = None):
         """
         CAUTION: This function serves as the centralized point for sending requests in support of other functions. 
         Please refrain from attempting to use this endpoint independently. Utilize the designated functions instead; this one is not meant for direct user utilization.
@@ -512,7 +516,11 @@ class TelegramAPI:
         if height: # Also for videos
             params.update({'height': height})
         if thumbnail: # For videos and documents
-            files.update({'thumbnail': open(thumbnail, 'rb')})
+            if byte:
+                files.update({'thumbnail': ('xxx', thumbnail, 'application/octet-stream')})
+            else:
+                files.update({'thumbnail': open(thumbnail, 'rb')})
+            
         if supports_streaming: # For videos
             params.update({'supports_streaming': True})
         if disable_content_type_detection: # For Documents
@@ -565,7 +573,10 @@ class TelegramAPI:
         if self.is_url(audio):
             params.update({'audio': audio})            
         elif audio:
-            files.update({'audio': open(audio, 'rb')})
+            if byte:
+                files.update({'audio': ('xxx', audio, 'application/octet-stream')})
+            else:
+                files.update({'audio': open(audio, 'rb')})
 
         if media_group:
             params.update({'media': json.dumps(media_group)})

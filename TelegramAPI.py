@@ -8,7 +8,6 @@ from urllib.parse import urlparse
 
 from datetime import datetime, timezone
 from typing import Union
-from io import BytesIO
 
 from TelegramParser import Parser
 
@@ -130,7 +129,8 @@ class TelegramAPI:
             return False
 
 
-    def post_media_group(self, chat_id: Union[str, int], mtype: str, media: list, caption: str = None, disable_notification: bool = False, protect_content: bool = False, reply_to_message_id: int = None):
+    def post_media_group(self, chat_id: Union[str, int], mtype: str, media: list, caption: str = None, disable_notification: bool = False, protect_content: bool = False,
+                         reply_to_message_id: int = None, byte: bool = False):
         """
         CAUTION: This function is currently designed for internal use within other functions, specifically for sending multiple media items. It was not intended for direct user utilization.
         If you want to send mixed items as a group, use send_document endpoint instead.
@@ -142,15 +142,19 @@ class TelegramAPI:
             if self.is_url(item):
                 media_group.append({'type': mtype, 'media': item})
             else:
-                files.update({f'file{i}': (f'{basename(item)}', open(item, 'rb'))})
+                if byte:
+                    files.update({f'file{i}': (f'file{i}', item, 'application/octet-stream')})
+                else:
+                    files.update({f'file{i}': (basename(item), open(item, 'rb'))})
                 media_group.append({'type': mtype, 'media': f'attach://file{i}'})
 
         # When you are uploading as sendMediaGroup, it doesn't accept the caption in the traditional way.
         # Fucking stupid but what can you do.
-        if media_group:
-            media_group[0]['caption'] = caption
-        elif files:
-            files[0]['caption'] = caption
+        if caption:
+            if media_group:
+                media_group[0]['caption'] = caption
+            elif files:
+                files[0]['caption'] = caption
 
         return self.post(
             url = f'https://api.telegram.org/bot{self.token}/sendMediaGroup',
@@ -159,11 +163,12 @@ class TelegramAPI:
             media_files = files,
             disable_notification = disable_notification,
             protect_content = protect_content,
-            reply_to_message_id = reply_to_message_id
+            reply_to_message_id = reply_to_message_id,
+            byte = byte
         )
 
 
-    def send_document(self, chat_id: Union[int, str], document: Union[str, list], caption: str = None, thumbnail: str = None, parse_mode: str = None,
+    def send_document(self, chat_id: Union[int, str], document: Union[str, bytes, list], caption: str = None, thumbnail: str = None, parse_mode: str = None, byte: bool = False,
                     disable_content_type_detection: bool = False, disable_notification: bool = False, protect_content: bool = False, reply_to_message_id: int = None):
         """
         Sends a document or a list of documents to the specified chat.
@@ -178,11 +183,12 @@ class TelegramAPI:
         - disable_content_type_detection: Disables automatic server-side content type detection for files uploaded using multipart/form-data.
         - disable_notification: Sends the message silently. Users will receive a notification with no sound.
         - protect_content: Protects the contents of the sent document message from forwarding and saving.
+        - byte: Set this to True if you are passing a file from memory as a bytes-like variable.
 
         Example:
         bot.send_document(chat_id='@example_channel', document='/path/to/document.pdf', caption='Check out this document!', thumbnail='/path/to/thumbnail.jpg', disable_content_type_detection=False)
         """
-        if isinstance(document, str):
+        if isinstance(document, (str, bytes)):
             return self.post(
                 url = f'https://api.telegram.org/bot{self.token}/sendDocument',
                 chat_id = chat_id,
@@ -193,10 +199,11 @@ class TelegramAPI:
                 disable_content_type_detection = disable_content_type_detection,
                 disable_notification = disable_notification,
                 protect_content = protect_content,
-                reply_to_message_id = reply_to_message_id
+                reply_to_message_id = reply_to_message_id,
+                byte = byte
             )
         elif isinstance(document, list):
-            return self.post_media_group(chat_id = chat_id, mtype = 'document', media = document, caption = caption, reply_to_message_id = reply_to_message_id, disable_notification = disable_notification, protect_content = protect_content)
+            return self.post_media_group(chat_id = chat_id, mtype = 'document', media = document, caption = caption, reply_to_message_id = reply_to_message_id, disable_notification = disable_notification, protect_content = protect_content, byte=byte)
 
 
     def send_audio(self, chat_id: Union[int, str], audio: Union[str, bytes, list], caption: str = None, reply_to_message_id: int = None, parse_mode: str = None, byte: bool = False,
@@ -216,6 +223,7 @@ class TelegramAPI:
         - thumbnail: Path to a thumbnail image for the audio file.
         - disable_notification: Sends the message silently. Users will receive a notification with no sound.
         - protect_content: Protects the contents of the sent audio message from forwarding and saving.
+        - byte: Set this to True if you are passing a file from memory as a bytes-like variable.
 
         Example:
         bot.send_audio(chat_id='@example_channel', audio='/path/to/audio.mp3', caption='Check out this audio!', reply_to_message_id=123456789, duration=180, performer='Artist', title='Song Title', disable_notification=False)
@@ -237,12 +245,12 @@ class TelegramAPI:
                 byte = byte
             )
         elif isinstance(audio, list):
-            return self.post_media_group(chat_id = chat_id, mtype = 'audio', media = audio, caption = caption, reply_to_message_id = reply_to_message_id, disable_notification = disable_notification, protect_content = protect_content)
+            return self.post_media_group(chat_id = chat_id, mtype = 'audio', media = audio, caption = caption, reply_to_message_id = reply_to_message_id, disable_notification = disable_notification, protect_content = protect_content, byte=byte)
 
 
-    def send_video(self, chat_id: Union[int, str], video: Union[str, list], caption: str = None, reply_to_message_id: int = None, parse_mode: str = None,
+    def send_video(self, chat_id: Union[int, str], video: Union[str, bytes, list], caption: str = None, reply_to_message_id: int = None, parse_mode: str = None,
                 disable_notification: bool = False, protect_content: bool = False, has_spoiler: bool = False, duration: int = None, width: int = None,
-                height: int = None, thumbnail: str = None, supports_streaming: bool = False):
+                height: int = None, thumbnail: str = None, supports_streaming: bool = False, byte: bool = False):
         """
         Sends a video or a list of videos to the specified chat.
 
@@ -260,11 +268,12 @@ class TelegramAPI:
         - height: Height of the video in pixels.
         - thumbnail: Path to a thumbnail image for the video.
         - supports_streaming: Pass True if the uploaded video is suitable for streaming.
+        - byte: Set this to True if you are passing a file from memory as a bytes-like variable.
 
         Example:
         bot.send_video(chat_id='@example_channel', video='/path/to/video.mp4', caption='Check out this video!', reply_to_message_id=123456789, has_spoilers=True)
         """
-        if isinstance(video, str):
+        if isinstance(video, (str, bytes)):
             return self.post(
                 url = f'https://api.telegram.org/bot{self.token}/sendVideo',
                 chat_id = chat_id,
@@ -279,14 +288,15 @@ class TelegramAPI:
                 duration = duration,
                 width = width,
                 height = height,
-                thumbnail = thumbnail
+                thumbnail = thumbnail,
+                byte = byte
             )
         elif isinstance(video, list):
-            return self.post_media_group(chat_id = chat_id, mtype = 'video', media = video, caption = caption, reply_to_message_id = reply_to_message_id, disable_notification = disable_notification, protect_content = protect_content)
+            return self.post_media_group(chat_id = chat_id, mtype = 'video', media = video, caption = caption, reply_to_message_id = reply_to_message_id, disable_notification = disable_notification, protect_content = protect_content, byte=byte)
 
 
-    def send_photo(self, chat_id: Union[int, str], photo:Union[str, list], caption: str = None, reply_to_message_id: int = None, parse_mode: str = None, disable_notification: bool = False,
-                   protect_content: bool = False, has_spoiler: bool = False):
+    def send_photo(self, chat_id: Union[int, str], photo: Union[str, bytes, list], caption: str = None, reply_to_message_id: int = None, parse_mode: str = None, disable_notification: bool = False,
+                   protect_content: bool = False, has_spoiler: bool = False, byte: bool = False):
         """
         Sends a photo to the specified chat.
 
@@ -299,11 +309,12 @@ class TelegramAPI:
         - disable_notification: Sends the message silently. Users will receive a notification with no sound.
         - protect_content: Protects the contents of the sent photo message from forwarding and saving.
         - has_spoiler: Pass True if the photo needs to be covered with a spoiler animation
+        - byte: Set this to True if you are passing a file from memory as a bytes-like variable.
 
         Example:
         bot.send_photo(chat_id='@example_channel', photo='/path/to/photo.jpg', caption='Check out this photo!', reply_to_message_id=123456789, has_spoiler=True)
         """
-        if isinstance(photo, str):
+        if isinstance(photo, (str, bytes)):
             return self.post(
                 url = f'https://api.telegram.org/bot{self.token}/sendPhoto',
                 chat_id = chat_id,
@@ -313,10 +324,11 @@ class TelegramAPI:
                 parse_mode = parse_mode,
                 disable_notification = disable_notification,
                 protect_content = protect_content,
-                has_spoiler = has_spoiler
+                has_spoiler = has_spoiler,
+                byte = byte
             )
         elif isinstance(photo, list):
-            return self.post_media_group(chat_id = chat_id, mtype = 'photo', media = photo, caption = caption, reply_to_message_id = reply_to_message_id, disable_notification = disable_notification, protect_content = protect_content)
+            return self.post_media_group(chat_id = chat_id, mtype = 'photo', media = photo, caption = caption, reply_to_message_id = reply_to_message_id, disable_notification = disable_notification, protect_content = protect_content, byte=byte)
 
 
     def send_contact(self, chat_id: Union[str, int], phone_number: str, first_name: str, last_name: str = None, vcard: str = None, disable_notification: bool = False, protect_content: bool = False):
@@ -382,8 +394,8 @@ class TelegramAPI:
         )
 
 
-    def send_voice(self, chat_id: Union[int, str], voice: str, duration: int = None, caption: str = None, parse_mode: str = None, reply_to_message_id: str = None, disable_notification: bool = False,
-                   protect_content: bool = False):
+    def send_voice(self, chat_id: Union[int, str], voice: Union[str, bytes], duration: int = None, caption: str = None, parse_mode: str = None, reply_to_message_id: str = None, disable_notification: bool = False,
+                   protect_content: bool = False, byte: bool = False):
         """
         Sends a voice message to the specified chat.
 
@@ -395,6 +407,7 @@ class TelegramAPI:
         - reply_to_message_id: The message ID to which this voice message will reply to.
         - disable_notification: Sends the message silently. Users will receive a notification with no sound.
         - protect_content: Protects the contents of the sent voice message from forwarding and saving.
+        - byte: Set this to True if you are passing a file from memory as a bytes-like variable.
 
         Example:
         bot.send_voice(chat_id='ID or @channel', voice='/path/to/voice.ogg', duration=10, caption='Check out this voice message!', reply_to_message_id=123456789, disable_notification=True)
@@ -408,7 +421,8 @@ class TelegramAPI:
             parse_mode = parse_mode,
             reply_to_message_id = reply_to_message_id,
             disable_notification = disable_notification,
-            protect_content = protect_content
+            protect_content = protect_content,
+            byte = byte
         )
 
 
@@ -554,21 +568,32 @@ class TelegramAPI:
         # Dealing with medias etc
         if voice:
             files.update({'voice': voice})
+        if voice and byte:
+            files.update({'voice': ('xxx', voice, 'application/octet-stream')})
         
         if self.is_url(photo):
             params.update({'photo': photo})
         elif photo:
-            files.update({'photo': open(photo, 'rb')})
+            if byte:
+                files.update({'photo': ('xxx', document, 'application/octet-stream')})
+            else:
+                files.update({'photo': open(photo, 'rb')})
         
         if self.is_url(video):
             params.update({'video': video})
         elif video:
-            files.update({'video': open(video, 'rb')})
+            if byte:
+                files.update({'video': ('xxx', video, 'application/octet-stream')})
+            else:
+                files.update({'video': open(video, 'rb')})
         
         if self.is_url(document):
             params.update({'document': document})
         elif document:
-            files.update({'document': open(document, 'rb')})
+            if byte:
+                files.update({'document': ('xxx', document, 'application/octet-stream')})
+            else:
+                files.update({'document': open(document, 'rb')})
 
         if self.is_url(audio):
             params.update({'audio': audio})            

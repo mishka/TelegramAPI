@@ -331,6 +331,38 @@ class TelegramAPI:
             return self.post_media_group(chat_id = chat_id, mtype = 'photo', media = photo, caption = caption, reply_to_message_id = reply_to_message_id, disable_notification = disable_notification, protect_content = protect_content, byte=byte)
 
 
+    def send_voice(self, chat_id: Union[int, str], voice: Union[str, bytes], duration: int = None, caption: str = None, parse_mode: str = None, reply_to_message_id: str = None, disable_notification: bool = False,
+                   protect_content: bool = False, byte: bool = False):
+        """
+        Sends a voice message to the specified chat.
+
+        Parameters:
+        - chat_id: Unique identifier for the target chat or username of the target channel (in the format @channelusername).
+        - voice: Path to the audio file to be sent. Pass a file_id as a string to send a file that exists on the Telegram servers (recommended), pass an HTTP URL as a string for Telegram to get a file from the Internet, or upload a new one using multipart/form-data.
+        - duration: Duration of the voice message in seconds. If the file you uploaded is 10 seconds long, and you enter 5 as the duration, only the first 5 seconds will be sent.
+        - caption: Voice message caption, 0-1024 characters after entities parsing.
+        - reply_to_message_id: The message ID to which this voice message will reply to.
+        - disable_notification: Sends the message silently. Users will receive a notification with no sound.
+        - protect_content: Protects the contents of the sent voice message from forwarding and saving.
+        - byte: Set this to True if you are passing a file from memory as a bytes-like variable.
+
+        Example:
+        bot.send_voice(chat_id='ID or @channel', voice='/path/to/voice.ogg', duration=10, caption='Check out this voice message!', reply_to_message_id=123456789, disable_notification=True)
+        """
+        return self.post(
+            url = f'https://api.telegram.org/bot{self.token}/sendVoice',
+            chat_id = chat_id,
+            voice = open(voice, 'rb'),
+            duration = duration,
+            caption = caption,
+            parse_mode = parse_mode,
+            reply_to_message_id = reply_to_message_id,
+            disable_notification = disable_notification,
+            protect_content = protect_content,
+            byte = byte
+        )
+
+
     def send_contact(self, chat_id: Union[str, int], phone_number: str, first_name: str, last_name: str = None, vcard: str = None, disable_notification: bool = False, protect_content: bool = False):
         """
         Sends a contact to the specified chat or channel.
@@ -394,38 +426,6 @@ class TelegramAPI:
         )
 
 
-    def send_voice(self, chat_id: Union[int, str], voice: Union[str, bytes], duration: int = None, caption: str = None, parse_mode: str = None, reply_to_message_id: str = None, disable_notification: bool = False,
-                   protect_content: bool = False, byte: bool = False):
-        """
-        Sends a voice message to the specified chat.
-
-        Parameters:
-        - chat_id: Unique identifier for the target chat or username of the target channel (in the format @channelusername).
-        - voice: Path to the audio file to be sent. Pass a file_id as a string to send a file that exists on the Telegram servers (recommended), pass an HTTP URL as a string for Telegram to get a file from the Internet, or upload a new one using multipart/form-data.
-        - duration: Duration of the voice message in seconds. If the file you uploaded is 10 seconds long, and you enter 5 as the duration, only the first 5 seconds will be sent.
-        - caption: Voice message caption, 0-1024 characters after entities parsing.
-        - reply_to_message_id: The message ID to which this voice message will reply to.
-        - disable_notification: Sends the message silently. Users will receive a notification with no sound.
-        - protect_content: Protects the contents of the sent voice message from forwarding and saving.
-        - byte: Set this to True if you are passing a file from memory as a bytes-like variable.
-
-        Example:
-        bot.send_voice(chat_id='ID or @channel', voice='/path/to/voice.ogg', duration=10, caption='Check out this voice message!', reply_to_message_id=123456789, disable_notification=True)
-        """
-        return self.post(
-            url = f'https://api.telegram.org/bot{self.token}/sendVoice',
-            chat_id = chat_id,
-            voice = open(voice, 'rb'),
-            duration = duration,
-            caption = caption,
-            parse_mode = parse_mode,
-            reply_to_message_id = reply_to_message_id,
-            disable_notification = disable_notification,
-            protect_content = protect_content,
-            byte = byte
-        )
-
-
     def send_message(self, chat_id:Union[str, int], text: str, reply_to_message_id: int = None, parse_mode: str = None, no_webpage: bool = False, disable_notification: bool = False, protect_content: bool = False):
         """
         Sends a text message to the specified chat.
@@ -451,6 +451,33 @@ class TelegramAPI:
             no_webpage = no_webpage,
             disable_notification = disable_notification,
             protect_content = protect_content
+        )
+
+
+    def send_sticker(self, chat_id: Union[int, str], sticker: Union[str, bytes], emoji: str = None, reply_to_message_id: int = None, disable_notification: bool = False, protect_content: bool = False, byte: bool = False):
+        """
+        Sends a sticker to the specified chat.
+
+        Parameters:
+        - chat_id: Unique identifier for the target chat or username of the target channel (in the format @channelusername).
+        - sticker: Sticker to send. Pass a file_id as String to send a file that exists on the Telegram servers (recommended), pass an HTTP URL as a String for Telegram to get a .WEBP sticker from the Internet, or upload a new .WEBP or .TGS sticker using multipart/form-data. Video stickers can only be sent by a file_id. Animated stickers can't be sent via an HTTP URL.
+        - emoji: Emoji associated with the sticker; only for just uploaded stickers.
+        - reply_to_message_id: The message ID to which this message will reply to.
+        - disable_notification: Sends the message silently. Users will receive a notification with no sound.
+        - protect_content: Protects the contents of the sent message from forwarding and saving.
+
+        Example:
+        bot.send_sticker(chat_id='ID or @channel', sticker='filepath', disable_notification=True)
+        """
+        return self.post(
+            url = f'https://api.telegram.org/bot{self.token}/sendSticker',
+            chat_id = chat_id,
+            sticker = sticker,
+            emoji = emoji,
+            reply_to_message_id = reply_to_message_id,
+            disable_notification = disable_notification,
+            protect_content = protect_content,
+            byte = byte
         )
 
 
@@ -494,7 +521,7 @@ class TelegramAPI:
              no_webpage=None, contact_number=None, contact_first_name=None, contact_last_name=None, contact_vcard=None, voice=None, duration=None,
              latitude=None, longitude=None, horizontal_accuracy=None, live_period=None, heading=None, proximity_alert_radius=None, photo = None, has_spoiler = None,
              video = None, width = None, height = None, thumbnail = None, supports_streaming = None, disable_content_type_detection = None, document = None,
-             audio = None, performer = None, title = None, media_group = None, media_files = None, byte = None):
+             audio = None, performer = None, title = None, media_group = None, media_files = None, byte = None, sticker = None, emoji = None):
         """
         CAUTION: This function serves as the centralized point for sending requests in support of other functions. 
         Please refrain from attempting to use this endpoint independently. Utilize the designated functions instead; this one is not meant for direct user utilization.
@@ -529,12 +556,6 @@ class TelegramAPI:
             params.update({'width': width})
         if height: # Also for videos
             params.update({'height': height})
-        if thumbnail: # For videos and documents
-            if byte:
-                files.update({'thumbnail': ('xxx', thumbnail, 'application/octet-stream')})
-            else:
-                files.update({'thumbnail': open(thumbnail, 'rb')})
-            
         if supports_streaming: # For videos
             params.update({'supports_streaming': True})
         if disable_content_type_detection: # For Documents
@@ -566,44 +587,28 @@ class TelegramAPI:
                 params.update({'proximity_alert_radius': proximity_alert_radius})
 
         # Dealing with medias etc
-        if voice:
-            files.update({'voice': voice})
-        if voice and byte:
-            files.update({'voice': ('xxx', voice, 'application/octet-stream')})
-        
-        if self.is_url(photo):
-            params.update({'photo': photo})
-        elif photo:
-            if byte:
-                files.update({'photo': ('xxx', document, 'application/octet-stream')})
-            else:
-                files.update({'photo': open(photo, 'rb')})
-        
-        if self.is_url(video):
-            params.update({'video': video})
-        elif video:
-            if byte:
-                files.update({'video': ('xxx', video, 'application/octet-stream')})
-            else:
-                files.update({'video': open(video, 'rb')})
-        
-        if self.is_url(document):
-            params.update({'document': document})
-        elif document:
-            if byte:
-                files.update({'document': ('xxx', document, 'application/octet-stream')})
-            else:
-                files.update({'document': open(document, 'rb')})
+        for key, value in [
+            ('photo', photo),
+            ('video', video),
+            ('audio', audio),
+            ('voice', voice),
+            ('sticker', sticker),
+            ('document', document),
+            ('thumbnail', thumbnail)
+        ]:
+            if value:
+                if self.is_url(value):
+                    params.update({key: value})
+                elif byte:
+                    files.update({key: ('xxx', value, 'application/octet-stream')})
+                else:
+                    try:
+                        files.update({key: open(value, 'rb')})
+                    except FileNotFoundError: # if it's a file ID
+                        params.update({'sticker': value})
 
-        if self.is_url(audio):
-            params.update({'audio': audio})            
-        elif audio:
-            if byte:
-                files.update({'audio': ('xxx', audio, 'application/octet-stream')})
-            else:
-                files.update({'audio': open(audio, 'rb')})
-
-        if media_group:
+        # sendMediaGroup requires a bit of special attention
+        if media_group: # it's different than others
             params.update({'media': json.dumps(media_group)})
         if media_files:
             files.update(media_files)

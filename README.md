@@ -18,6 +18,7 @@ It is currently in progress; however, it can already achieve the following:
   - Audio
   - Voice
   - Contact
+  - Sticker
   - Media Groups
 - Delete messages
 - Edit messages

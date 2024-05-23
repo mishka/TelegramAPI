@@ -78,10 +78,15 @@ class TelegramAPI:
             print(f'Received Message: {message.text}')
         """
         while True:
-            updates = self.get_updates()
-            for update in updates:
-                yield self.parser.process(update)
-            time.sleep(polling_interval)
+            try:
+                updates = self.get_updates()
+                for update in updates:
+                    yield self.parser.process(update)
+                time.sleep(polling_interval)
+            except Exception as e:
+                print(f'An error occured while fetching the updates: {e}')
+                print(f'Retrying in {polling_interval} seconds.')
+                time.sleep(polling_interval)
 
 
     def download_attachment(self, file_id: str, file_name: str, download_path: str) -> bool:
@@ -426,6 +431,33 @@ class TelegramAPI:
         )
 
 
+    def send_sticker(self, chat_id: Union[int, str], sticker: Union[str, bytes], emoji: str = None, reply_to_message_id: int = None, disable_notification: bool = False, protect_content: bool = False, byte: bool = False):
+        """
+        Sends a sticker to the specified chat.
+
+        Parameters:
+        - chat_id: Unique identifier for the target chat or username of the target channel (in the format @channelusername).
+        - sticker: Sticker to send. Pass a file_id as String to send a file that exists on the Telegram servers (recommended), pass an HTTP URL as a String for Telegram to get a .WEBP sticker from the Internet, or upload a new .WEBP or .TGS sticker using multipart/form-data. Video stickers can only be sent by a file_id. Animated stickers can't be sent via an HTTP URL.
+        - emoji: Emoji associated with the sticker; only for just uploaded stickers.
+        - reply_to_message_id: The message ID to which this message will reply to.
+        - disable_notification: Sends the message silently. Users will receive a notification with no sound.
+        - protect_content: Protects the contents of the sent message from forwarding and saving.
+
+        Example:
+        bot.send_sticker(chat_id='ID or @channel', sticker='filepath', disable_notification=True)
+        """
+        return self.post(
+            url = f'https://api.telegram.org/bot{self.token}/sendSticker',
+            chat_id = chat_id,
+            sticker = sticker,
+            emoji = emoji,
+            reply_to_message_id = reply_to_message_id,
+            disable_notification = disable_notification,
+            protect_content = protect_content,
+            byte = byte
+        )
+
+
     def send_message(self, chat_id:Union[str, int], text: str, reply_to_message_id: int = None, parse_mode: str = None, no_webpage: bool = False, disable_notification: bool = False, protect_content: bool = False):
         """
         Sends a text message to the specified chat.
@@ -451,33 +483,6 @@ class TelegramAPI:
             no_webpage = no_webpage,
             disable_notification = disable_notification,
             protect_content = protect_content
-        )
-
-
-    def send_sticker(self, chat_id: Union[int, str], sticker: Union[str, bytes], emoji: str = None, reply_to_message_id: int = None, disable_notification: bool = False, protect_content: bool = False, byte: bool = False):
-        """
-        Sends a sticker to the specified chat.
-
-        Parameters:
-        - chat_id: Unique identifier for the target chat or username of the target channel (in the format @channelusername).
-        - sticker: Sticker to send. Pass a file_id as String to send a file that exists on the Telegram servers (recommended), pass an HTTP URL as a String for Telegram to get a .WEBP sticker from the Internet, or upload a new .WEBP or .TGS sticker using multipart/form-data. Video stickers can only be sent by a file_id. Animated stickers can't be sent via an HTTP URL.
-        - emoji: Emoji associated with the sticker; only for just uploaded stickers.
-        - reply_to_message_id: The message ID to which this message will reply to.
-        - disable_notification: Sends the message silently. Users will receive a notification with no sound.
-        - protect_content: Protects the contents of the sent message from forwarding and saving.
-
-        Example:
-        bot.send_sticker(chat_id='ID or @channel', sticker='filepath', disable_notification=True)
-        """
-        return self.post(
-            url = f'https://api.telegram.org/bot{self.token}/sendSticker',
-            chat_id = chat_id,
-            sticker = sticker,
-            emoji = emoji,
-            reply_to_message_id = reply_to_message_id,
-            disable_notification = disable_notification,
-            protect_content = protect_content,
-            byte = byte
         )
 
 

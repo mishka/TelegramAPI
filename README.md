@@ -33,6 +33,9 @@ You can create a bot through [@BotFather](https://telegram.me/BotFather)
 You can learn about your chat ID by messaging `/my_id` to the [@get_id_bot](https://telegram.me/get_id_bot) on telegram.
 Or, you can send your bot a message, and access this URL to see the updates coming through to your bot to see your user ID: https://api.telegram.org/YourTokenHere/getUpdates
 
+## Projects that rely on this API!
+- [A YouTube mp3 downloader bot that runs on memory!](https://github.com/mishka/TelegramMusicBot)
+
 # Some Code Examples
 
 **As you write function names in your IDE, you will see the available parameters for all of them.  

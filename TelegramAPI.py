@@ -1,6 +1,8 @@
 import json
 import time
+
 import requests
+from requests.exceptions import RequestException
 
 from os import getcwd
 from os.path import splitext, join, basename
@@ -63,12 +65,13 @@ class TelegramAPI:
         return updates
 
 
-    def poll_updates(self, polling_interval: int=1):
+    def poll_updates(self, polling_interval: int = 2, max_retries: int = None):
         """
         Continuously polls for the latest updates and yields the processed results.
 
         Parameters:
-        - polling_interval: Time interval in seconds between polling for updates.
+        - polling_interval: Initial time interval in seconds between polling for updates.
+        - max_retries: Maximum number of retries before giving up (None for unlimited retries).
 
         Yields:
         - Processed updates using the parser.
@@ -77,16 +80,33 @@ class TelegramAPI:
         for message in bot.poll_updates(polling_interval=2):
             print(f'Received Message: {message.text}')
         """
-        while True:
+        retries = 0
+        backoff_interval = polling_interval
+
+        while max_retries is None or retries < max_retries:
             try:
                 updates = self.get_updates()
                 for update in updates:
                     yield self.parser.process(update)
+
+                # Reset retries and backoff interval after a successful fetch
+                retries = 0
+                backoff_interval = polling_interval
                 time.sleep(polling_interval)
+
+            except RequestException as e:
+                retries += 1
+                print(f"Connection error: {e}. Retry {retries}/{max_retries if max_retries else '∞'}.")
+
+                # Apply exponential backoff
+                time.sleep(backoff_interval)
+                backoff_interval = min(backoff_interval * 2, 60)  # Cap at 60 seconds
+
             except Exception as e:
-                print(f'An error occured while fetching the updates: {e}')
-                print(f'Retrying in {polling_interval} seconds.')
-                time.sleep(polling_interval)
+                print(f'Unexpected error: {e}. Retrying in {backoff_interval} seconds.')
+                time.sleep(backoff_interval)
+
+        print(f'Maximum retry limit reached ({max_retries}). Exiting polling loop.')
 
 
     def download_attachment(self, file_id: str, file_name: str, download_path: str) -> bool:
@@ -618,5 +638,11 @@ class TelegramAPI:
         if media_files:
             files.update(media_files)
 
-        response = requests.post(url, params=params, files=files)
-        return self.parser.process(json.loads(response.text))
+        try:
+            response = requests.post(url, params=params, files=files)
+            response.raise_for_status()
+            return self.parser.process(response.json())
+        except requests.RequestException as e:
+            print(f"Error sending request: {e}")
+            return None
+        

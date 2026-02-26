@@ -2,7 +2,7 @@ import json
 import time
 
 import requests
-from requests.exceptions import RequestException
+from requests.exceptions import RequestException, Timeout, ConnectionError as RequestsConnectionError
 
 from os import getcwd
 from os.path import splitext, join, basename
@@ -54,30 +54,44 @@ class TelegramAPI:
             return dt.astimezone().strftime('%d/%m/%Y %H:%M:%S')
 
 
-    def get_updates(self):
-        """Gets the latest updates from the /getUpdates endpoint. This function is made for the poll_updates() function."""
+    def get_updates(self, long_poll_timeout: int = 30):
+        """
+        Gets the latest updates from the /getUpdates endpoint.
+        Uses Telegram server-side long-polling (timeout param) so the
+        server holds the connection open for up to `long_poll_timeout`
+        seconds before returning an empty list — much more efficient than
+        tight short-polling loops.
+
+        The client-side requests timeout is set slightly higher than the
+        Telegram timeout so we never hang indefinitely on a dead connection.
+        """
         url = f'{self.base_url}/getUpdates'
         params = {'offset': self.last_update_id + 1} if self.last_update_id else {}
-        response = requests.get(url, params=params)
+        params['timeout'] = long_poll_timeout  # Telegram server-side long-poll
+        # Client timeout must be > long_poll_timeout to avoid false Timeout errors
+        response = requests.get(url, params=params, timeout=long_poll_timeout + 5)
         updates = response.json().get('result', [])
         if updates:
             self.last_update_id = updates[-1]['update_id']
         return updates
 
 
-    def poll_updates(self, polling_interval: int = 2, max_retries: int = None):
+    def poll_updates(self, polling_interval: int = 2, long_poll_timeout: int = 30, max_retries: int = None):
         """
         Continuously polls for the latest updates and yields the processed results.
 
         Parameters:
-        - polling_interval: Initial time interval in seconds between polling for updates.
-        - max_retries: Maximum number of retries before giving up (None for unlimited retries).
+        - polling_interval: Short sleep between polls when NOT using long-polling
+          (unused when long_poll_timeout > 0, kept for API compatibility).
+        - long_poll_timeout: Seconds Telegram holds the connection open server-side.
+          Set to 0 to disable long-polling and revert to short-polling.
+        - max_retries: Maximum number of retries before giving up (None = unlimited).
 
         Yields:
         - Processed updates using the parser.
 
         Example:
-        for message in bot.poll_updates(polling_interval=2):
+        for message in bot.poll_updates():
             print(f'Received Message: {message.text}')
         """
         retries = 0
@@ -85,22 +99,32 @@ class TelegramAPI:
 
         while max_retries is None or retries < max_retries:
             try:
-                updates = self.get_updates()
+                updates = self.get_updates(long_poll_timeout=long_poll_timeout)
                 for update in updates:
                     yield self.parser.process(update)
 
-                # Reset retries and backoff interval after a successful fetch
+                # Reset retries and backoff after a successful fetch
                 retries = 0
                 backoff_interval = polling_interval
-                time.sleep(polling_interval)
 
-            except RequestException as e:
+                # With long-polling, the server already waited; no extra sleep needed.
+                # With long_poll_timeout=0 (short-poll mode) we still sleep.
+                if long_poll_timeout == 0:
+                    time.sleep(polling_interval)
+
+            except Timeout:
+                # A Timeout here means the long-poll window expired with no updates
+                # (or the network was briefly slow). This is not a real error — just
+                # loop again immediately without incrementing retries.
+                pass
+
+            except (RequestsConnectionError, RequestException) as e:
                 retries += 1
                 print(f"Connection error: {e}. Retry {retries}/{max_retries if max_retries else '∞'}.")
 
-                # Apply exponential backoff
+                # Exponential backoff capped at 60 s
                 time.sleep(backoff_interval)
-                backoff_interval = min(backoff_interval * 2, 60)  # Cap at 60 seconds
+                backoff_interval = min(backoff_interval * 2, 60)
 
             except Exception as e:
                 print(f'Unexpected error: {e}. Retrying in {backoff_interval} seconds.')
@@ -639,7 +663,7 @@ class TelegramAPI:
             files.update(media_files)
 
         try:
-            response = requests.post(url, params=params, files=files)
+            response = requests.post(url, params=params, files=files, timeout=30)
             response.raise_for_status()
             return self.parser.process(response.json())
         except requests.RequestException as e:

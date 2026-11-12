@@ -1,172 +1,395 @@
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from typing import Any
+
+
+def _thumbnail(data: Any) -> dict[str, Any]:
+    return data if isinstance(data, dict) else {}
+
+
+@dataclass(slots=True)
 class Message:
-    def __init__(self, update_id, message_id, from_user_id, from_is_bot, from_first_name, from_username,
-                 chat_id, chat_first_name, chat_username, chat_type, date, edit_date, text, caption, media_group_id,
-                 video, photo, voice, audio, sticker, contact, location, document, animation, video_note):
-        # general IDs
-        self.update_id = update_id
-        self.message_id = message_id
+    # General IDs
+    update_id: int | None = None
+    message_id: int | None = None
 
-        # from section
-        self.from_id = from_user_id
-        self.from_is_bot = from_is_bot
-        self.from_first_name = from_first_name
-        self.from_username = from_username
+    # From section
+    from_id: int | None = None
+    from_is_bot: bool | None = None
+    from_first_name: str | None = None
+    from_username: str | None = None
+    from_last_name: str | None = None
 
-        # chat section
-        self.chat_id = chat_id
-        self.chat_first_name = chat_first_name
-        self.chat_username = chat_username
-        self.chat_type = chat_type
+    # Chat section
+    chat_id: int | None = None
+    chat_first_name: str | None = None
+    chat_username: str | None = None
+    chat_title: str | None = None
+    chat_type: str | None = None
 
-        # dates and basic context
-        self.date = date
-        self.text = text
-        self.caption = caption
-        self.edit_date = edit_date
+    # Dates and basic context
+    date: int | None = None
+    edit_date: int | None = None
+    text: str | None = None
+    caption: str | None = None
+    media_group_id: str | None = None
+    reply_to_message_id: int | None = None
+    message_thread_id: int | None = None
+    is_topic_message: bool | None = None
+    entities: list[dict[str, Any]] | None = None
+    caption_entities: list[dict[str, Any]] | None = None
 
-        # if the post is part of a media group
-        self.media_group_id = media_group_id
-        
-        # medias and attachments
-        self.video = video
-        self.photo = photo
-        self.voice = voice
-        self.audio = audio
-        self.sticker = sticker
-        self.contact = contact
-        self.location = location
-        self.document = document
-        self.animation = animation
-        self.video_note = video_note
+    # Media and attachments
+    video: Video | None = None
+    photo: Photo | None = None
+    voice: Voice | None = None
+    audio: Audio | None = None
+    sticker: Sticker | None = None
+    contact: Contact | None = None
+    location: Location | None = None
+    document: Document | None = None
+    animation: Animation | None = None
+    video_note: VideoNote | None = None
+
+    # Update metadata
+    update_type: str | None = None
+
+    # Everything Telegram sent, so new fields are never lost
+    raw: dict[str, Any] = field(default_factory=dict, repr=False)
+    raw_message: dict[str, Any] = field(default_factory=dict, repr=False)
+
+    @property
+    def id(self) -> int | None:
+        """Alias for message_id, for convenience."""
+        return self.message_id
 
 
+@dataclass(slots=True)
 class Sticker:
-    def __init__(self, width, height, emoji, set_name, is_animated, is_video, sticker_type,
-                 file_id, file_unique_id, file_size, thumbnail_file_id, thumbnail_file_unique_id,
-                 thumbnail_file_size, thumbnail_width, thumbnail_height):
-        self.width = width
-        self.height = height
-        self.emoji = emoji
-        self.set_name = set_name
-        self.is_animated = is_animated
-        self.is_video = is_video
-        self.sticker_type = sticker_type
-        self.file_id = file_id
-        self.file_unique_id = file_unique_id
-        self.file_size = file_size
-        self.thumbnail_file_id = thumbnail_file_id
-        self.thumbnail_file_unique_id = thumbnail_file_unique_id
-        self.thumbnail_file_size = thumbnail_file_size
-        self.thumbnail_width = thumbnail_width
-        self.thumbnail_height = thumbnail_height
+    width: int | None = None
+    height: int | None = None
+    emoji: str | None = None
+    set_name: str | None = None
+    is_animated: bool | None = None
+    is_video: bool | None = None
+    sticker_type: str | None = None
+    file_id: str | None = None
+    file_unique_id: str | None = None
+    file_size: int | None = None
+    thumbnail_file_id: str | None = None
+    thumbnail_file_unique_id: str | None = None
+    thumbnail_file_size: int | None = None
+    thumbnail_width: int | None = None
+    thumbnail_height: int | None = None
+    raw: dict[str, Any] = field(default_factory=dict, repr=False)
+
+    @property
+    def type(self) -> str | None:
+        return self.sticker_type
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> Sticker:
+        data = data or {}
+        thumbnail = _thumbnail(data.get("thumbnail") or data.get("thumb"))
+        return cls(
+            width=data.get("width"),
+            height=data.get("height"),
+            emoji=data.get("emoji"),
+            set_name=data.get("set_name"),
+            is_animated=data.get("is_animated"),
+            is_video=data.get("is_video"),
+            sticker_type=data.get("type"),
+            file_id=data.get("file_id"),
+            file_unique_id=data.get("file_unique_id"),
+            file_size=data.get("file_size"),
+            thumbnail_file_id=thumbnail.get("file_id"),
+            thumbnail_file_unique_id=thumbnail.get("file_unique_id"),
+            thumbnail_file_size=thumbnail.get("file_size"),
+            thumbnail_width=thumbnail.get("width"),
+            thumbnail_height=thumbnail.get("height"),
+            raw=data,
+        )
 
 
+@dataclass(slots=True)
 class Animation:
-    def __init__(self, file_name, mime_type, duration, width, height, file_id, file_unique_id,
-                 file_size, thumbnail_file_id, thumbnail_file_unique_id, thumbnail_file_size,
-                 thumbnail_width, thumbnail_height):
-        self.file_name = file_name
-        self.mime_type = mime_type
-        self.duration = duration
-        self.width = width
-        self.height = height
-        self.file_id = file_id
-        self.file_unique_id = file_unique_id
-        self.file_size = file_size
-        self.thumbnail_file_id = thumbnail_file_id
-        self.thumbnail_file_unique_id = thumbnail_file_unique_id
-        self.thumbnail_file_size = thumbnail_file_size
-        self.thumbnail_width = thumbnail_width
-        self.thumbnail_height = thumbnail_height
-        
+    file_name: str | None = None
+    mime_type: str | None = None
+    duration: int | None = None
+    width: int | None = None
+    height: int | None = None
+    file_id: str | None = None
+    file_unique_id: str | None = None
+    file_size: int | None = None
+    thumbnail_file_id: str | None = None
+    thumbnail_file_unique_id: str | None = None
+    thumbnail_file_size: int | None = None
+    thumbnail_width: int | None = None
+    thumbnail_height: int | None = None
+    raw: dict[str, Any] = field(default_factory=dict, repr=False)
 
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> Animation:
+        data = data or {}
+        thumbnail = _thumbnail(data.get("thumbnail") or data.get("thumb"))
+        return cls(
+            file_name=data.get("file_name"),
+            mime_type=data.get("mime_type"),
+            duration=data.get("duration"),
+            width=data.get("width"),
+            height=data.get("height"),
+            file_id=data.get("file_id"),
+            file_unique_id=data.get("file_unique_id"),
+            file_size=data.get("file_size"),
+            thumbnail_file_id=thumbnail.get("file_id"),
+            thumbnail_file_unique_id=thumbnail.get("file_unique_id"),
+            thumbnail_file_size=thumbnail.get("file_size"),
+            thumbnail_width=thumbnail.get("width"),
+            thumbnail_height=thumbnail.get("height"),
+            raw=data,
+        )
+
+
+@dataclass(slots=True)
 class Video:
-    def __init__(self, duration, width, height, file_name, mime_type, file_id, unique_id, size, thumbnail_file_id,
-                 thumbnail_file_unique_id, thumbnail_file_size, thumbnail_width, thumbnail_height):
-        self.duration = duration
-        self.width = width 
-        self.height = height
-        self.file_name = file_name
-        self.mime_type = mime_type
-        self.file_id = file_id
-        self.unique_id = unique_id
-        self.video_size = size
-        self.thumbnail_file_id = thumbnail_file_id
-        self.thumbnail_file_unique_id = thumbnail_file_unique_id
-        self.thumbnail_file_size = thumbnail_file_size
-        self.thumbnail_width = thumbnail_width
-        self.thumbnail_height = thumbnail_height
+    duration: int | None = None
+    width: int | None = None
+    height: int | None = None
+    file_name: str | None = None
+    mime_type: str | None = None
+    file_id: str | None = None
+    file_unique_id: str | None = None
+    file_size: int | None = None
+    thumbnail_file_id: str | None = None
+    thumbnail_file_unique_id: str | None = None
+    thumbnail_file_size: int | None = None
+    thumbnail_width: int | None = None
+    thumbnail_height: int | None = None
+    raw: dict[str, Any] = field(default_factory=dict, repr=False)
+
+    @property
+    def unique_id(self) -> str | None:
+        """Backwards-compatible alias for file_unique_id."""
+        return self.file_unique_id
+
+    @property
+    def video_size(self) -> int | None:
+        """Backwards-compatible alias for file_size."""
+        return self.file_size
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> Video:
+        data = data or {}
+        thumbnail = _thumbnail(data.get("thumbnail") or data.get("thumb"))
+        return cls(
+            duration=data.get("duration"),
+            width=data.get("width"),
+            height=data.get("height"),
+            file_name=data.get("file_name"),
+            mime_type=data.get("mime_type"),
+            file_id=data.get("file_id"),
+            file_unique_id=data.get("file_unique_id"),
+            file_size=data.get("file_size"),
+            thumbnail_file_id=thumbnail.get("file_id"),
+            thumbnail_file_unique_id=thumbnail.get("file_unique_id"),
+            thumbnail_file_size=thumbnail.get("file_size"),
+            thumbnail_width=thumbnail.get("width"),
+            thumbnail_height=thumbnail.get("height"),
+            raw=data,
+        )
 
 
+@dataclass(slots=True)
 class Document:
-    def __init__(self, file_name, mime_type, file_id, file_unique_id, file_size, thumbnail_file_id,
-                 thumbnail_file_unique_id, thumbnail_file_size, thumbnail_width, thumbnail_height):
-        self.file_name = file_name
-        self.mime_type = mime_type
-        self.file_id = file_id
-        self.file_unique_id = file_unique_id
-        self.file_size = file_size
-        self.thumbnail_file_id = thumbnail_file_id
-        self.thumbnail_file_unique_id = thumbnail_file_unique_id
-        self.thumbnail_file_size = thumbnail_file_size
-        self.thumbnail_width = thumbnail_width
-        self.thumbnail_height = thumbnail_height
+    file_name: str | None = None
+    mime_type: str | None = None
+    file_id: str | None = None
+    file_unique_id: str | None = None
+    file_size: int | None = None
+    thumbnail_file_id: str | None = None
+    thumbnail_file_unique_id: str | None = None
+    thumbnail_file_size: int | None = None
+    thumbnail_width: int | None = None
+    thumbnail_height: int | None = None
+    raw: dict[str, Any] = field(default_factory=dict, repr=False)
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> Document:
+        data = data or {}
+        thumbnail = _thumbnail(data.get("thumbnail") or data.get("thumb"))
+        return cls(
+            file_name=data.get("file_name"),
+            mime_type=data.get("mime_type"),
+            file_id=data.get("file_id"),
+            file_unique_id=data.get("file_unique_id"),
+            file_size=data.get("file_size"),
+            thumbnail_file_id=thumbnail.get("file_id"),
+            thumbnail_file_unique_id=thumbnail.get("file_unique_id"),
+            thumbnail_file_size=thumbnail.get("file_size"),
+            thumbnail_width=thumbnail.get("width"),
+            thumbnail_height=thumbnail.get("height"),
+            raw=data,
+        )
 
 
+@dataclass(slots=True)
 class VideoNote:
-    def __init__(self, duration, length, file_id, file_unique_id, file_size, thumbnail_file_id,
-                 thumbnail_file_unique_id, thumbnail_file_size, thumbnail_width, thumbnail_height):
-        self.duration = duration
-        self.length = length
-        self.file_id = file_id
-        self.file_unique_id = file_unique_id
-        self.file_size = file_size
-        self.thumbnail_file_id = thumbnail_file_id
-        self.thumbnail_file_unique_id = thumbnail_file_unique_id
-        self.thumbnail_file_size = thumbnail_file_size
-        self.thumbnail_width = thumbnail_width
-        self.thumbnail_height = thumbnail_height
+    duration: int | None = None
+    length: int | None = None
+    file_id: str | None = None
+    file_unique_id: str | None = None
+    file_size: int | None = None
+    thumbnail_file_id: str | None = None
+    thumbnail_file_unique_id: str | None = None
+    thumbnail_file_size: int | None = None
+    thumbnail_width: int | None = None
+    thumbnail_height: int | None = None
+    raw: dict[str, Any] = field(default_factory=dict, repr=False)
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> VideoNote:
+        data = data or {}
+        thumbnail = _thumbnail(data.get("thumbnail") or data.get("thumb"))
+        return cls(
+            duration=data.get("duration"),
+            length=data.get("length"),
+            file_id=data.get("file_id"),
+            file_unique_id=data.get("file_unique_id"),
+            file_size=data.get("file_size"),
+            thumbnail_file_id=thumbnail.get("file_id"),
+            thumbnail_file_unique_id=thumbnail.get("file_unique_id"),
+            thumbnail_file_size=thumbnail.get("file_size"),
+            thumbnail_width=thumbnail.get("width"),
+            thumbnail_height=thumbnail.get("height"),
+            raw=data,
+        )
 
 
+@dataclass(slots=True)
 class Audio:
-    def __init__(self, duration, file_name, mime_type, file_id, file_unique_id, file_size):
-        self.duration = duration
-        self.file_name = file_name
-        self.mime_type = mime_type
-        self.file_id = file_id
-        self.file_unique_id = file_unique_id
-        self.file_size = file_size
+    duration: int | None = None
+    file_name: str | None = None
+    mime_type: str | None = None
+    file_id: str | None = None
+    file_unique_id: str | None = None
+    file_size: int | None = None
+    performer: str | None = None
+    title: str | None = None
+    thumbnail_file_id: str | None = None
+    thumbnail_file_unique_id: str | None = None
+    thumbnail_file_size: int | None = None
+    thumbnail_width: int | None = None
+    thumbnail_height: int | None = None
+    raw: dict[str, Any] = field(default_factory=dict, repr=False)
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> Audio:
+        data = data or {}
+        thumbnail = _thumbnail(data.get("thumbnail") or data.get("thumb"))
+        return cls(
+            duration=data.get("duration"),
+            file_name=data.get("file_name"),
+            mime_type=data.get("mime_type"),
+            file_id=data.get("file_id"),
+            file_unique_id=data.get("file_unique_id"),
+            file_size=data.get("file_size"),
+            performer=data.get("performer"),
+            title=data.get("title"),
+            thumbnail_file_id=thumbnail.get("file_id"),
+            thumbnail_file_unique_id=thumbnail.get("file_unique_id"),
+            thumbnail_file_size=thumbnail.get("file_size"),
+            thumbnail_width=thumbnail.get("width"),
+            thumbnail_height=thumbnail.get("height"),
+            raw=data,
+        )
 
 
+@dataclass(slots=True)
 class Photo:
-    def __init__(self, file_id, file_unique_id, file_size, width, height):
-        self.file_id = file_id
-        self.file_unique_id = file_unique_id
-        self.file_size = file_size
-        self.width = width
-        self.height = height
+    file_id: str | None = None
+    file_unique_id: str | None = None
+    file_size: int | None = None
+    width: int | None = None
+    height: int | None = None
+    raw: dict[str, Any] = field(default_factory=dict, repr=False)
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> Photo:
+        data = data or {}
+        return cls(
+            file_id=data.get("file_id"),
+            file_unique_id=data.get("file_unique_id"),
+            file_size=data.get("file_size"),
+            width=data.get("width"),
+            height=data.get("height"),
+            raw=data,
+        )
 
 
+@dataclass(slots=True)
 class Voice:
-    def __init__(self, duration, mime_type, file_id, file_unique_id, file_size):
-        self.duration = duration
-        self.mime_type = mime_type
-        self.file_id = file_id
-        self.file_unique_id = file_unique_id
-        self.file_size = file_size
+    duration: int | None = None
+    mime_type: str | None = None
+    file_id: str | None = None
+    file_unique_id: str | None = None
+    file_size: int | None = None
+    raw: dict[str, Any] = field(default_factory=dict, repr=False)
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> Voice:
+        data = data or {}
+        return cls(
+            duration=data.get("duration"),
+            mime_type=data.get("mime_type"),
+            file_id=data.get("file_id"),
+            file_unique_id=data.get("file_unique_id"),
+            file_size=data.get("file_size"),
+            raw=data,
+        )
 
 
+@dataclass(slots=True)
 class Contact:
-    def __init__(self, phone_number, first_name, user_id):
-        self.phone_number = phone_number
-        self.first_name = first_name
-        self.user_id = user_id
+    phone_number: str | None = None
+    first_name: str | None = None
+    user_id: int | None = None
+    last_name: str | None = None
+    vcard: str | None = None
+    raw: dict[str, Any] = field(default_factory=dict, repr=False)
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> Contact:
+        data = data or {}
+        return cls(
+            phone_number=data.get("phone_number"),
+            first_name=data.get("first_name"),
+            user_id=data.get("user_id"),
+            last_name=data.get("last_name"),
+            vcard=data.get("vcard"),
+            raw=data,
+        )
 
 
+@dataclass(slots=True)
 class Location:
-    def __init__(self, latitude, longitude, live_period, heading, horizontal_accuracy):
-        self.latitude = latitude
-        self.longitude = longitude
-        self.live_period = live_period
-        self.heading = heading
-        self.horizontal_accuracy = horizontal_accuracy
+    latitude: float | None = None
+    longitude: float | None = None
+    live_period: int | None = None
+    heading: int | None = None
+    horizontal_accuracy: float | None = None
+    proximity_alert_radius: int | None = None
+    raw: dict[str, Any] = field(default_factory=dict, repr=False)
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> Location:
+        data = data or {}
+        return cls(
+            latitude=data.get("latitude"),
+            longitude=data.get("longitude"),
+            live_period=data.get("live_period"),
+            heading=data.get("heading"),
+            horizontal_accuracy=data.get("horizontal_accuracy"),
+            proximity_alert_radius=data.get("proximity_alert_radius"),
+            raw=data,
+        )

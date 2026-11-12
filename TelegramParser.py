@@ -1,239 +1,152 @@
-from TelegramTypes import Message, Video, Document, VideoNote
-from TelegramTypes import Audio, Photo, Voice, Contact, Location
-from TelegramTypes import Sticker, Animation
+from __future__ import annotations
+
+from typing import Any
+
+from TelegramTypes import (
+    Animation,
+    Audio,
+    Contact,
+    Document,
+    Location,
+    Message,
+    Photo,
+    Sticker,
+    Video,
+    VideoNote,
+    Voice,
+)
+
+MESSAGE_UPDATE_KEYS = (
+    "message",
+    "edited_message",
+    "channel_post",
+    "edited_channel_post",
+    "business_message",
+    "edited_business_message",
+)
+
+
+def _dict(value: Any) -> dict[str, Any]:
+    return value if isinstance(value, dict) else {}
+
+
+def _photo_data(value: Any) -> dict[str, Any]:
+    if isinstance(value, dict):
+        return value
+    if isinstance(value, list) and value:
+        last = value[-1]
+        return last if isinstance(last, dict) else {}
+    return {}
+
 
 class Parser:
-    def process(self, message):
-            # GET one
-            message_data = message.get('message', {})
-            # GET but if the content is updated/edited
-            if not message_data:
-                message_data = message.get('edited_message', {})
-            # POST one
-            if not message_data:
-                message_data = message.get('result', {})
-                # ducktape fix for sendMediaGroup.
+    def process(self, update: Any) -> Any:
+        """
+        Parses one raw Telegram update, or a complete Bot API response.
 
-                # if you upload 3 items, you get 3 responses back within a list.
-                # for now i send the first one back.
-                # i will have to scale this out for messages with many items within
-                if str(message_data).startswith('['):
-                    message_data = message_data[-1]
+        Message updates are returned as Message objects. Non-message updates
+        (callback queries, inline queries, etc.) are also returned as Message
+        objects, with update_type set and the untouched update available in
+        `.raw`.
+        """
+        if not isinstance(update, dict):
+            return update
 
-            if type(message_data) == bool:
-                return
+        # A complete Bot API response, e.g. {"ok": True, "result": ...}
+        if "result" in update and not any(key in update for key in MESSAGE_UPDATE_KEYS):
+            return self.parse_result(update.get("result"))
 
-            from_data = message_data.get('from', {})
-            chat_data = message_data.get('chat', {})
-            video_data = message_data.get('video', {})
-            photo_data = message_data.get('photo', {})
-            document_data = message_data.get('document', {})
-            voice_data = message_data.get('voice', {})
-            video_note_data = message_data.get('video_note', {})
-            audio_data = message_data.get('audio', {})
-            contact_data = message_data.get('contact', {})
-            location_data = message_data.get('location', {})
-            sticker_data = message_data.get('sticker', {})
-            animation_data = message_data.get('animation', {})
-            
-            update_id = message.get('update_id')
-            message_id = message_data.get('message_id')
-            
-            from_user_id = from_data.get('id')
-            from_is_bot = from_data.get('is_bot')
-            from_first_name = from_data.get('first_name')
-            from_username = from_data.get('username')
-            
-            chat_id = chat_data.get('id')
-            chat_first_name = chat_data.get('first_name')
-            chat_username = chat_data.get('username')
-            chat_type = chat_data.get('type')
+        update_id = update.get("update_id")
+        for key in MESSAGE_UPDATE_KEYS:
+            data = update.get(key)
+            if isinstance(data, dict):
+                return self.parse_message(
+                    data,
+                    update_id=update_id,
+                    update_type=key,
+                    raw_update=update,
+                )
 
-            date = message_data.get('date')
-            text = message_data.get('text')
-            caption = message_data.get('caption')
-            edit_date = message_data.get('edit_date')
-            media_group_id = message_data.get('media_group_id')
-            
-            # Parse Sticker Data
-            if sticker_data:
-                sticker_width = sticker_data.get('width')
-                sticker_height = sticker_data.get('height')
-                sticker_emoji = sticker_data.get('emoji')
-                sticker_set_name = sticker_data.get('set_name')
-                sticker_is_animated = sticker_data.get('is_animated')
-                sticker_is_video = sticker_data.get('is_video')
-                sticker_type = sticker_data.get('type')
-                sticker_file_id = sticker_data.get('file_id')
-                sticker_file_unique_id = sticker_data.get('file_unique_id')
-                sticker_file_size = sticker_data.get('file_size')
-                
-                sticker_thumbnail_data = sticker_data.get('thumbnail')
-                sticker_thumbnail_file_id = sticker_thumbnail_data.get('file_id')
-                sticker_thumbnail_file_unique_id = sticker_thumbnail_data.get('file_unique_id')
-                sticker_thumbnail_file_size = sticker_thumbnail_data.get('file_size')
-                sticker_thumbnail_width = sticker_thumbnail_data.get('width')
-                sticker_thumbnail_height = sticker_thumbnail_data.get('height')
+        update_type = next((key for key in update if key != "update_id"), "unknown")
+        return Message(update_id=update_id, update_type=update_type, raw=update)
 
-                sticker = Sticker(sticker_width, sticker_height, sticker_emoji, sticker_set_name, sticker_is_animated,
-                                  sticker_is_video, sticker_type, sticker_file_id, sticker_file_unique_id,
-                                  sticker_file_size, sticker_thumbnail_file_id, sticker_thumbnail_file_unique_id,
-                                  sticker_thumbnail_file_size, sticker_thumbnail_width, sticker_thumbnail_height)
-            else:
-                sticker = None
+    def parse_message(
+        self,
+        data: dict[str, Any],
+        update_id: int | None = None,
+        update_type: str = "message",
+        raw_update: dict[str, Any] | None = None,
+    ) -> Message:
+        if not isinstance(data, dict):
+            return data
 
-            # Parse GIFs
-            if animation_data:
-                animation_file_name = animation_data.get('file_name')
-                animation_mime_type = animation_data.get('mime_type')
-                animation_duration = animation_data.get('duration')
-                animation_width = animation_data.get('width')
-                animation_height = animation_data.get('height')
-                animation_file_id = animation_data.get('file_id')
-                animation_file_unique_id = animation_data.get('file_unique_id')
-                animation_file_size = animation_data.get('file_size')
-                
-                animation_thumbnail_data = animation_data.get('thumbnail')
-                animation_thumbnail_file_id = animation_thumbnail_data.get('file_id')
-                animation_thumbnail_file_unique_id = animation_thumbnail_data.get('file_unique_id')
-                animation_thumbnail_file_size = animation_thumbnail_data.get('file_size')
-                animation_thumbnail_width = animation_thumbnail_data.get('width')
-                animation_thumbnail_height = animation_thumbnail_data.get('height')
+        from_data = _dict(data.get("from"))
+        chat_data = _dict(data.get("chat"))
+        reply_data = _dict(data.get("reply_to_message"))
 
-                animation = Animation(animation_file_name, animation_mime_type, animation_duration, animation_width,
-                                      animation_height, animation_file_id, animation_file_unique_id, animation_file_size,
-                                      animation_thumbnail_file_id, animation_thumbnail_file_unique_id, animation_thumbnail_file_size,
-                                      animation_thumbnail_width, animation_thumbnail_height)
-            else:
-                animation = None
+        sticker_data = _dict(data.get("sticker"))
+        animation_data = _dict(data.get("animation"))
+        video_data = _dict(data.get("video"))
+        document_data = _dict(data.get("document"))
+        video_note_data = _dict(data.get("video_note"))
+        audio_data = _dict(data.get("audio"))
+        voice_data = _dict(data.get("voice"))
+        contact_data = _dict(data.get("contact"))
+        location_data = _dict(data.get("location"))
 
-            # Parse Video Data
-            if video_data:
-                video_duration = video_data.get('duration')
-                video_width = video_data.get('width')
-                video_height = video_data.get('height')
-                video_file_name = video_data.get('file_name')
-                video_mime_type = video_data.get('mime_type')
-                video_file_id = video_data.get('file_id')
-                video_unique_id = video_data.get('file_unique_id')
-                video_size = video_data.get('file_size')
+        photo_data = _photo_data(data.get("photo"))
+        photo = Photo.from_dict(photo_data) if photo_data else None
 
-                video_thumbnail_data = video_data.get('thumbnail', {})
-                video_thumbnail_file_id = video_thumbnail_data.get('file_id')
-                video_thumbnail_file_unique_id = video_thumbnail_data.get('file_unique_id')
-                video_thumbnail_file_size = video_thumbnail_data.get('file_size')
-                video_thumbnail_width = video_thumbnail_data.get('width')
-                video_thumbnail_height = video_thumbnail_data.get('height')
-                
-                video = Video(video_duration, video_width, video_height, video_file_name, video_mime_type,
-                            video_file_id, video_unique_id, video_size, video_thumbnail_file_id, video_thumbnail_file_unique_id,
-                            video_thumbnail_file_size, video_thumbnail_width, video_thumbnail_height)
-            else:
-                video = None
+        return Message(
+            update_id=update_id,
+            message_id=data.get("message_id"),
+            from_id=from_data.get("id"),
+            from_is_bot=from_data.get("is_bot"),
+            from_first_name=from_data.get("first_name"),
+            from_username=from_data.get("username"),
+            from_last_name=from_data.get("last_name"),
+            chat_id=chat_data.get("id"),
+            chat_first_name=chat_data.get("first_name"),
+            chat_username=chat_data.get("username"),
+            chat_title=chat_data.get("title"),
+            chat_type=chat_data.get("type"),
+            date=data.get("date"),
+            edit_date=data.get("edit_date"),
+            text=data.get("text"),
+            caption=data.get("caption"),
+            media_group_id=data.get("media_group_id"),
+            reply_to_message_id=reply_data.get("message_id"),
+            message_thread_id=data.get("message_thread_id"),
+            is_topic_message=data.get("is_topic_message"),
+            entities=data.get("entities"),
+            caption_entities=data.get("caption_entities"),
+            video=Video.from_dict(video_data) if video_data else None,
+            photo=photo,
+            voice=Voice.from_dict(voice_data) if voice_data else None,
+            audio=Audio.from_dict(audio_data) if audio_data else None,
+            sticker=Sticker.from_dict(sticker_data) if sticker_data else None,
+            contact=Contact.from_dict(contact_data) if contact_data else None,
+            location=Location.from_dict(location_data) if location_data else None,
+            document=Document.from_dict(document_data) if document_data else None,
+            animation=Animation.from_dict(animation_data) if animation_data else None,
+            video_note=VideoNote.from_dict(video_note_data) if video_note_data else None,
+            update_type=update_type,
+            raw=raw_update if raw_update is not None else data,
+            raw_message=data,
+        )
 
-            # Parse Document Files
-            if document_data:
-                document_file_name = document_data.get('file_name')
-                document_mime_type = document_data.get('mime_type')
-                document_file_id = document_data.get('file_id')
-                document_file_unique_id = document_data.get('file_unique_id')
-                document_file_size = document_data.get('file_size')
-                document_thumbnail_data = document_data.get('thumbnail', {})
-                
-                document_thumbnail_file_id = document_thumbnail_data.get('file_id')
-                document_thumbnail_file_unique_id = document_thumbnail_data.get('file_unique_id')
-                document_thumbnail_file_size = document_thumbnail_data.get('file_size')
-                document_thumbnail_width = document_thumbnail_data.get('width')
-                document_thumbnail_height = document_thumbnail_data.get('height')
+    def parse_result(self, result: Any) -> Any:
+        """
+        Parses the value of a Bot API "result" field.
 
-                document = Document(document_file_name, document_mime_type, document_file_id, document_file_unique_id,
-                                    document_file_size, document_thumbnail_file_id, document_thumbnail_file_unique_id,
-                                    document_thumbnail_file_size, document_thumbnail_width, document_thumbnail_height)
-            else:
-                document = None
-
-            # Parse the circle video thing
-            if video_note_data:
-                video_note_duration = video_note_data.get('duration')
-                video_note_length = video_note_data.get('length')
-                video_note_file_id = video_note_data.get('file_id')
-                video_note_file_unique_id = video_note_data.get('file_unique_id')
-                video_note_file_size = video_note_data.get('file_size')
-                video_note_thumbnail_data = video_note_data.get('thumbnail', {})
-                
-                video_note_thumbnail_file_id = video_note_thumbnail_data.get('file_id')
-                video_note_thumbnail_file_unique_id = video_note_thumbnail_data.get('file_unique_id')
-                video_note_thumbnail_file_size = video_note_thumbnail_data.get('file_size')
-                video_note_thumbnail_width = video_note_thumbnail_data.get('width')
-                video_note_thumbnail_height = video_note_thumbnail_data.get('height')
-
-                video_note = VideoNote(video_note_duration, video_note_length, video_note_file_id, video_note_file_unique_id,
-                                    video_note_file_size, video_note_thumbnail_file_id, video_note_thumbnail_file_unique_id,
-                                    video_note_thumbnail_file_size, video_note_thumbnail_width, video_note_thumbnail_height)
-            else:
-                video_note = None
-
-            # Parse audio files
-            if audio_data:
-                audio_duration = audio_data.get('duration')
-                audio_file_name = audio_data.get('file_name')
-                audio_mime_type = audio_data.get('mime_type')
-                audio_file_id = audio_data.get('file_id')
-                audio_file_unique_id = audio_data.get('file_unique_id')
-                audio_file_size = audio_data.get('file_size')
-
-                audio = Audio(audio_duration, audio_file_name, audio_mime_type, audio_file_id, audio_file_unique_id, audio_file_size)
-            else:
-                audio = None
-
-            # Parse Photos
-            if photo_data:
-                photo_data = photo_data[-1] # we get the last entry which is the highest quality
-                photo_file_id = photo_data.get('file_id')
-                photo_file_unique_id = photo_data.get('file_unique_id')
-                photo_file_size = photo_data.get('file_size')
-                photo_width = photo_data.get('width')
-                photo_height = photo_data.get('height')
-
-                photo = Photo(photo_file_id, photo_file_unique_id, photo_file_size, photo_width, photo_height)
-            else:
-                photo = None
-
-            # Parse Voice Messages
-            if voice_data:
-                voice_duration = voice_data.get('duration')
-                voice_mime_type = voice_data.get('mime_type')
-                voice_file_id = voice_data.get('file_id')
-                voice_file_unique_id = voice_data.get('file_unique_id')
-                voice_file_size = voice_data.get('file_size')
-
-                voice = Voice(voice_duration, voice_mime_type, voice_file_id, voice_file_unique_id, voice_file_size)
-            else:
-                voice = None
-
-            # Parse Shared Contacts
-            if contact_data:
-                contact_phone_number = contact_data.get('phone_number')
-                contact_first_name = contact_data.get('first_name')
-                contact_user_id = contact_data.get('user_id')
-
-                contact = Contact(contact_phone_number, contact_first_name, contact_user_id)
-
-            else:
-                contact = None
-
-            # Parse Location Data
-            if location_data:
-                location_latitude = location_data.get('latitude')
-                location_longitude = location_data.get('longitude')
-                location_live_period = location_data.get('live_period')
-                location_heading = location_data.get('heading')
-                location_horizontal_accuracy = location_data.get('horizontal_accuracy')
-
-                location = Location(location_latitude, location_longitude, location_live_period, location_heading, location_horizontal_accuracy)
-            else:
-                location = None
-
-            return Message(update_id, message_id, from_user_id, from_is_bot, from_first_name, from_username,
-                            chat_id, chat_first_name, chat_username, chat_type, date, edit_date, text, caption, media_group_id,
-                            video, photo, voice, audio, sticker, contact, location, document, animation, video_note)
+        A single message becomes a Message, a list of messages (sendMediaGroup)
+        becomes a list of Messages, and other values (deleteMessage, getMe,
+        MessageId, booleans, etc.) are returned unchanged.
+        """
+        if isinstance(result, dict):
+            if "message_id" in result:
+                return self.parse_message(result)
+            return result
+        if isinstance(result, list):
+            return [self.parse_message(item) for item in result if isinstance(item, dict)]
+        return result

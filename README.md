@@ -3,10 +3,10 @@ You can run a Telegram bot, get all the message data in a parsed way, download a
 
 If you need to automate a bot and get something done quickly, this library is what you are searching for.  
 
-The file sending is unexceptionally simplified. You only need to enter the file path, or a valid URL that telegram can fetch it from.
-  
+The file sending is unexceptionally simplified. You only need to enter the file path, a valid URL that telegram can fetch it from, bytes already in memory, or an open file object.  
+   
 It is currently in progress; however, it can already achieve the following:
-- Polling messages
+- Polling messages, with server-side long polling
 - Message information is parsed in a pythonic way
 - Endpoints which are covered for sending messages:
   - Text
@@ -17,15 +17,21 @@ It is currently in progress; however, it can already achieve the following:
   - Video
   - Audio
   - Voice
-  - Contact
   - Sticker
+  - Animation
+  - Video note
   - Media Groups
-- Delete messages
-- Edit messages
+- Inline keyboards, callback answers, and chat actions
+- Forward, copy, edit, delete, pin, and unpin messages
+- Download attachments to disk or to memory, with your own file names
+- Webhooks and bot/chat/file information
+- Clear exceptions instead of silent failures
   
 # Basics
 ## Dependencies
+- Python 3.10 or newer
 - requests
+
 ## Creating a bot
 You can create a bot through [@BotFather](https://telegram.me/BotFather)
 
@@ -42,11 +48,40 @@ Or, you can send your bot a message, and access this URL to see the updates comi
 They are all documented alongside with their functionality and accepted data types.  
 These are just some basic examples to give you an idea about the library.**
 
+All message and media sending methods return parsed `Message` objects. Media group sends return a list of `Message` objects.  
+`copy_message` returns a dictionary such as `{'message_id': 123}`, and methods that only confirm success, including `send_chat_action`, return Telegram's raw result, usually `True`.
+
 ## Importing the library and setting up your telegram object
 ```python
 from TelegramAPI import TelegramAPI
 
 telegram = TelegramAPI('Enter your bot token here. You can obtain it through @BotFather on telegram.')
+```
+
+The constructor also accepts a custom `requests.Session`, timeouts, and the number of automatic flood-wait retries:
+
+```python
+import requests
+
+session = requests.Session()
+telegram = TelegramAPI(
+    'Enter your bot token here.',
+    session = session,
+    timeout = 30,
+    upload_timeout = 120,
+    max_flood_retries = 3
+)
+```
+
+`timeout` applies to normal API calls. `upload_timeout` applies to requests that contain files.  
+You can also use the client as a context manager, or call `close()` yourself:
+
+```python
+with TelegramAPI('Enter your bot token here.') as telegram:
+    telegram.send_message(chat_id = 'Your ID here', text = 'Hi!')
+
+telegram = TelegramAPI('Enter your bot token here.')
+telegram.close()
 ```
 
 ## Sending a text message
@@ -56,6 +91,33 @@ telegram.send_message(
     text = 'You can visit my GitHub account here: github.com/mishka',
     no_webpage = True,
     disable_notification = True
+    )
+```
+
+`parse_mode` accepts `'Markdown'`, `'MarkdownV2'`, or `'HTML'`. You can pass `entities` or `link_preview_options` directly:
+
+```python
+telegram.send_message(
+    chat_id = 'Your ID here',
+    text = 'Hello, World!',
+    parse_mode = 'HTML',
+    link_preview_options = {'is_disabled': True}
+    )
+```
+
+## Sending a message with an inline keyboard
+```python
+telegram.send_message(
+    chat_id = 'Your ID here',
+    text = 'Choose an option:',
+    reply_markup = {
+        'inline_keyboard': [
+            [
+                {'text': 'Open GitHub', 'url': 'https://github.com/mishka'},
+                {'text': 'Say hello', 'callback_data': 'hello'}
+            ]
+        ]
+    }
     )
 ```
 
@@ -92,7 +154,6 @@ telegram.send_voice(
 
 ## Sending an audio
 ```python
-# Sending a single audio
 telegram.send_audio(
     chat_id = 'Your ID here',
     audio = 'path to audio file or valid url',
@@ -104,13 +165,46 @@ telegram.send_audio(
 
 ## Sending multiple audios
 ```python
-# Sending more than one audio
-# It currently does not support metadata when it is sent in groups
 telegram.send_audio(
     chat_id = 'Your ID here',
     audio = ['song path 1', 'song path 2', 'song path 3']
     )
 ```
+
+A list of more than one file is sent as a media group. This applies to `send_audio`, `send_video`, `send_photo`, and `send_document`.  
+Lists larger than 10 are split into multiple groups automatically. You can give each uploaded file its own name with `file_names`:
+
+```python
+telegram.send_audio(
+    chat_id = 'Your ID here',
+    audio = [b'first audio bytes', b'second audio bytes'],
+    file_names = ['First song.mp3', 'Second song.mp3'],
+    caption = 'Two songs'
+    )
+```
+
+You can also use `(source, file_name)` tuples or dictionaries to give each media group item its own metadata:
+
+```python
+telegram.send_audio(
+    chat_id = 'Your ID here',
+    audio = [
+        ('song 1.mp3', 'First song.mp3'),
+        {
+            'media': 'song 2.mp3',
+            'title': 'Second song',
+            'performer': 'Artist Name',
+            'duration': 180
+        },
+        'https://example.com/song3.mp3'
+    ],
+    caption = 'Three songs',
+    parse_mode = 'HTML'
+    )
+```
+
+If the list contains exactly one item, it is sent as a normal single message, so single-file metadata still works.  
+For groups, put per-file metadata inside the tuple or dictionary; top-level single-file metadata such as `duration` or `thumbnail` is only used for single sends.
 
 ## Sending a photo
 ```python
@@ -118,7 +212,7 @@ telegram.send_photo(
     chat_id = 'Your ID here',
     caption = 'Check this cool picture!',
     photo = 'path to file or a valid url',
-    has_spoilers = True
+    has_spoiler = True
     )
 ```
 
@@ -127,7 +221,11 @@ telegram.send_photo(
 telegram.send_photo(
     chat_id = 'Your ID here',
     caption = 'Check these cool pictures!',
-    photo = ['path to photo', 'photo url'],
+    photo = [
+        ('first.jpg', 'First picture.jpg'),
+        {'media': 'second.jpg', 'caption': 'Second picture'},
+        'https://example.com/third.jpg'
+    ],
     protect_content = True
     )
 ```
@@ -147,7 +245,10 @@ telegram.send_video(
 telegram.send_video(
     chat_id = 'Your ID here',
     caption = 'Check these cool videos!',
-    video = ['path to video', 'video url'],
+    video = [
+        'path to video',
+        {'media': 'https://example.com/video.mp4', 'caption': 'From the internet'}
+    ],
     protect_content = True
     )
 ```
@@ -157,64 +258,284 @@ telegram.send_video(
 telegram.send_document(
     chat_id = 'Your ID here',
     caption = 'Check this cool document!',
-    video = 'path to file or valid url',
+    document = 'path to file or valid url',
     protect_content = True
     )
 ```
 
 ## Sending multiple documents
 ```python
-# If you want to send many files, use this method.
 telegram.send_document(
     chat_id = 'Your ID here',
     caption = 'Check these cool files!',
-    video = ['audio file path', 'photo url', 'video file path', 'a custom file url'],
+    document = [
+        'audio file path',
+        'photo url',
+        'video file path',
+        {
+            'media': 'custom file url',
+            'caption': 'A custom file',
+            'disable_content_type_detection': True
+        }
+    ],
     protect_content = True
     )
 ```
 
-## Deleting a message
+## Sending a sticker
 ```python
-from time import sleep
-
-message = telegram.send_message(chat_id = 'ID', text = 'Hi!')
-sleep(5)
-telegram.delete_message(chat_id = 'ID', message_id = message.id)
-```
-
-## Editing a message
-```python
-telegram.send_message(
-    chat_id = 098765,
-    message_id = 123456,
-    text = 'Hi!',
-    parse_mode = 'Markdown'
+telegram.send_sticker(
+    chat_id = 'Your ID here',
+    sticker = 'path to sticker file, valid url, or file_id'
     )
 ```
 
-## Replying to messages or commands from users
-```python
-# I am thinking about adding decorators to this library, and further simplying this process.
-# For now, you can poll the updates, and listen to them in a loop. and add conditions inside that loop.
+`emoji` is optional and is only used for stickers that are being uploaded for the first time.
 
-for message in telegram.poll_updates(polling_interval=1):
-    if message.text.startswith('/ping'):
-        telegram.send_message(
-            chat_id = message.from_id,
-            text = '*pong!*'
-            reply_to_message_id = message.message_id,
-            parse_mode = 'Markdown'
+## Sending an animation
+```python
+telegram.send_animation(
+    chat_id = 'Your ID here',
+    animation = 'path to animation file or valid url',
+    caption = 'Look at this animation!',
+    duration = 5,
+    width = 480,
+    height = 270,
+    has_spoiler = False
+    )
+```
+
+Telegram treats a video as an animation when it is muted or when it is a GIF. A video with an audio track may come back as a normal video message.
+
+## Sending a video note
+```python
+telegram.send_video_note(
+    chat_id = 'Your ID here',
+    video_note = 'path to circular video or valid url',
+    duration = 10,
+    length = 240
+    )
+```
+
+## Uploading bytes from memory
+You no longer need a temporary file to send something that is already in memory. `bytes`, `bytearray`, and `memoryview` are detected automatically:
+
+```python
+with open('song.mp3', 'rb') as file:
+    telegram.send_audio(
+        chat_id = 'Your ID here',
+        audio = file,
+        file_name = 'Song.mp3'
+    )
+
+png_bytes = b'\x89PNG\r\n\x1a\n...'
+telegram.send_photo(
+    chat_id = 'Your ID here',
+    photo = png_bytes,
+    file_name = 'chart.png'
+    )
+
+zip_bytes = b'PK\x03\x04...'
+telegram.send_document(
+    chat_id = 'Your ID here',
+    document = zip_bytes,
+    file_name = 'archive.zip'
+    )
+```
+
+File objects that you pass in are never closed by the library; you keep ownership of them.  
+`byte = True` is still accepted for backwards compatibility, but it does nothing now because bytes are detected automatically.
+
+When you do not provide a name, the library uses a sensible default for the endpoint (`audio.mp3`, `video.mp4`, `photo.jpg`, `document.bin`, and so on). For in-memory bytes, the content is also inspected, so a PNG upload becomes `photo.png` instead of `photo.jpg`.
+
+## URLs, paths, file IDs, and file names
+A string is handled in this order:
+1. An `http://` or `https://` URL is passed to Telegram as a URL.
+2. An existing path is opened and streamed to Telegram.
+3. A string that looks like a Telegram `file_id` is passed without uploading it again.
+4. Anything else raises `FileNotFoundError`.
+
+```python
+telegram.send_photo(chat_id = 'Your ID here', photo = 'https://example.com/photo.jpg')
+telegram.send_photo(chat_id = 'Your ID here', photo = message.photo.file_id)
+telegram.send_photo(chat_id = 'Your ID here', photo = '/path/to/photo.jpg')
+```
+
+For path uploads, the file's base name is used unless you pass `file_name`. For URLs, Telegram uses the URL. For bytes, use `file_name`, `file_names`, `thumbnail_file_name`, or `certificate_file_name`.
+
+## Showing a chat action
+```python
+telegram.send_chat_action(chat_id = 'Your ID here', action = 'typing')
+```
+
+Useful actions include `'typing'`, `'upload_photo'`, `'upload_video'`, `'record_voice'`, `'upload_document'`, and `'find_location'`.
+
+## Forwarding, copying, deleting, and editing messages
+
+```python
+telegram.forward_message(
+    chat_id = 'Destination ID',
+    from_chat_id = 'Source ID',
+    message_id = 12345
+    )
+
+telegram.copy_message(
+    chat_id = 'Destination ID',
+    from_chat_id = 'Source ID',
+    message_id = 12345,
+    caption = 'Copied!'
+    )
+```
+
+`copy_message` returns the new `message_id` in a dictionary.  
+`forward_message` returns the new `Message` object.
+
+```python
+telegram.delete_message(chat_id = 'Your ID here', message_id = 1235)
+telegram.delete_messages(chat_id = 'Your ID here', message_ids = [1235, 1236])
+```
+
+```python
+telegram.edit_message(
+    chat_id = 'Your ID here',
+    message_id = 1235,
+    text = 'This is an updated text!',
+    parse_mode = 'Markdown'
+    )
+
+telegram.edit_message_caption(
+    chat_id = 'Your ID here',
+    message_id = 1235,
+    caption = 'This is an updated caption!'
+    )
+
+telegram.edit_message_reply_markup(
+    chat_id = 'Your ID here',
+    message_id = 1235,
+    reply_markup = {'inline_keyboard': []}
+    )
+```
+
+## Pinning and unpinning messages
+```python
+telegram.pin_chat_message(
+    chat_id = 'Your ID here',
+    message_id = 1235,
+    disable_notification = True
+    )
+
+telegram.unpin_chat_message(chat_id = 'Your ID here', message_id = 1235)
+
+# Unpin the most recent pinned message.
+telegram.unpin_chat_message(chat_id = 'Your ID here')
+```
+
+## Answering callback queries
+```python
+for update in telegram.poll_updates(allowed_updates = ['callback_query']):
+    callback = update.raw.get('callback_query')
+    if not callback:
+        continue
+
+    telegram.answer_callback_query(
+        callback_query_id = callback['id'],
+        text = 'Done!',
+        show_alert = False
         )
 ```
 
-## Polling, accessing the parsed data, and downloading attachments!
-```python
-# You can see all the available information that comes with user messages below.
+## Downloading attachments
+`download_attachment` uses the `file_id` from a received message. It writes the file to disk by default and returns the full path:
 
-# You can set the polling interval while setting it up. Default value is 1.
-for message in telegram.poll_updates(polling_interval=5): 
+```python
+message = telegram.send_document(
+    chat_id = 'Your ID here',
+    document = '/path/to/report.pdf'
+    )
+
+saved_path = telegram.download_attachment(
+    file_id = message.document.file_id,
+    file_name = 'downloaded-report.pdf',
+    download_path = '/path/to/downloads/'
+    )
+```
+
+Pass `as_bytes = True` to keep the file in memory instead:
+
+```python
+content = telegram.download_attachment(
+    file_id = message.document.file_id,
+    as_bytes = True
+    )
+```
+
+Downloads are streamed in chunks. You can change the chunk size and timeout, and 429/5xx responses are retried automatically:
+
+```python
+content = telegram.download_attachment(
+    file_id = message.document.file_id,
+    as_bytes = True,
+    chunk_size = 128 * 1024,
+    timeout = 60
+    )
+```
+
+If you do not pass `download_path`, `telegram.current_directory` is used. You can change that attribute at any time.
+
+## Getting bot, chat, and file information
+```python
+me = telegram.get_me()
+print(me['id'], me['username'])
+
+chat = telegram.get_chat(chat_id = '@example_channel')
+print(chat['title'])
+
+# `message` is a message you received earlier.
+file_info = telegram.get_file(file_id = message.document.file_id)
+print(file_info['file_path'])
+```
+
+## Raw updates, polling, and parsed data
+`get_updates` returns the raw updates from Telegram and advances the internal offset for you:
+
+```python
+updates = telegram.get_updates(
+    long_poll_timeout = 30,
+    allowed_updates = ['message', 'callback_query'],
+    limit = 100
+    )
+
+for update in updates:
+    print(f'Update ID: {update["update_id"]}')
+```
+
+`poll_updates` is a generator that parses each update into a `Message` object:
+
+```python
+for message in telegram.poll_updates(
+    polling_interval = 1,
+    long_poll_timeout = 30,
+    max_retries = None,
+    allowed_updates = ['message']
+    ):
     print(f'Update ID: {message.update_id}')
     print(f'Message ID: {message.message_id}')
+    print(f'Update type: {message.update_type}')
+    print(f'Text: {message.text}')
+```
+
+With long polling enabled (the default), Telegram holds the request for up to `long_poll_timeout` seconds, so `polling_interval` is only used when you set `long_poll_timeout = 0`.  
+`max_retries` limits consecutive network/server failures. Permanent errors such as an invalid token or a webhook conflict are raised immediately.
+
+Non-message updates such as callback queries are also returned as `Message` objects. Their `update_type` is set, and the untouched update is available in `.raw`.  
+The old aliases `message.id`, `sticker.type`, `video.unique_id`, and `video.video_size` are still available.
+
+## Polling, accessing the parsed data, and downloading attachments!
+```python
+for message in telegram.poll_updates(polling_interval = 5):
+    print(f'Update ID: {message.update_id}')
+    print(f'Message ID: {message.message_id}')
+    print(f'Update Type: {message.update_type}')
 
     print(f'From ID: {message.from_id}')
     print(f'From is Bot: {message.from_is_bot}')
@@ -233,7 +554,11 @@ for message in telegram.poll_updates(polling_interval=5):
     print(f'Media Group ID: {message.media_group_id}')
 
     if message.sticker:
-        telegram.download_attachment(message.sticker.file_id, message.sticker.file_unique_id, telegram.current_directory)
+        telegram.download_attachment(
+            message.sticker.file_id,
+            message.sticker.file_unique_id,
+            telegram.current_directory
+            )
 
         print(f'Sticker Width: {message.sticker.width}')
         print(f'Sticker Height: {message.sticker.height}')
@@ -246,14 +571,18 @@ for message in telegram.poll_updates(polling_interval=5):
         print(f'Sticker Unique ID: {message.sticker.file_unique_id}')
         print(f'Sticker Size: {message.sticker.file_size}')
 
-        print(f'Sticker Thumbnail File_ID: {message.sticker.thumbnail_file_id}')
+        print(f'Sticker Thumbnail File ID: {message.sticker.thumbnail_file_id}')
         print(f'Sticker Thumbnail File Unique ID: {message.sticker.thumbnail_file_unique_id}')
         print(f'Sticker Thumbnail File Size: {message.sticker.thumbnail_file_size}')
         print(f'Sticker Thumbnail Width: {message.sticker.thumbnail_width}')
         print(f'Sticker Thumbnail Height: {message.sticker.thumbnail_height}')
 
     if message.animation:
-        telegram.download_attachment(message.animation.file_id, message.animation.file_unique_id, telegram.current_directory)
+        telegram.download_attachment(
+            message.animation.file_id,
+            message.animation.file_name,
+            telegram.current_directory
+            )
 
         print(f'Animation File Name: {message.animation.file_name}')
         print(f'Animation Mime Type: {message.animation.mime_type}')
@@ -264,14 +593,18 @@ for message in telegram.poll_updates(polling_interval=5):
         print(f'Animation Unique ID: {message.animation.file_unique_id}')
         print(f'Animation Size: {message.animation.file_size}')
 
-        print(f'Animation Thumbnail File_ID: {message.animation.thumbnail_file_id}')
+        print(f'Animation Thumbnail File ID: {message.animation.thumbnail_file_id}')
         print(f'Animation Thumbnail File Unique ID: {message.animation.thumbnail_file_unique_id}')
         print(f'Animation Thumbnail File Size: {message.animation.thumbnail_file_size}')
         print(f'Animation Thumbnail Width: {message.animation.thumbnail_width}')
         print(f'Animation Thumbnail Height: {message.animation.thumbnail_height}')
 
     if message.video:
-        telegram.download_attachment(message.video.file_id, message.video.file_name, telegram.current_directory)
+        telegram.download_attachment(
+            message.video.file_id,
+            message.video.file_name,
+            telegram.current_directory
+            )
 
         print(f'Video Width: {message.video.width}')
         print(f'Video Height: {message.video.height}')
@@ -281,14 +614,18 @@ for message in telegram.poll_updates(polling_interval=5):
         print(f'Video Unique ID: {message.video.unique_id}')
         print(f'Video Video Size: {message.video.video_size}')
 
-        print(f'Video Thumbnail File_ID: {message.video.thumbnail_file_id}')
+        print(f'Video Thumbnail File ID: {message.video.thumbnail_file_id}')
         print(f'Video Thumbnail File Unique ID: {message.video.thumbnail_file_unique_id}')
         print(f'Video Thumbnail File Size: {message.video.thumbnail_file_size}')
         print(f'Video Thumbnail Width: {message.video.thumbnail_width}')
         print(f'Video Thumbnail Height: {message.video.thumbnail_height}')
 
     if message.document:
-        telegram.download_attachment(message.document.file_id, message.document.file_name, telegram.current_directory)
+        telegram.download_attachment(
+            message.document.file_id,
+            message.document.file_name,
+            telegram.current_directory
+            )
 
         print(f'Document Filename: {message.document.file_name}')
         print(f'Document Mime Type: {message.document.mime_type}')
@@ -304,7 +641,11 @@ for message in telegram.poll_updates(polling_interval=5):
             print(f'Document Thumbnail Height: {message.document.thumbnail_height}')
 
     if message.video_note:
-        telegram.download_attachment(message.video_note.file_id, message.video_note.file_unique_id, telegram.current_directory)
+        telegram.download_attachment(
+            message.video_note.file_id,
+            message.video_note.file_unique_id,
+            telegram.current_directory
+            )
 
         print(f'Video Note Duration: {message.video_note.duration}')
         print(f'Video Note Length: {message.video_note.length}')
@@ -319,7 +660,11 @@ for message in telegram.poll_updates(polling_interval=5):
         print(f'Video Note Thumbnail Height: {message.video_note.thumbnail_height}')
 
     if message.audio:
-        telegram.download_attachment(message.audio.file_id, message.audio.file_name, telegram.current_directory)
+        telegram.download_attachment(
+            message.audio.file_id,
+            message.audio.file_name,
+            telegram.current_directory
+            )
 
         print(f'Audio Duration: {message.audio.duration}')
         print(f'Audio File Name: {message.audio.file_name}')
@@ -329,7 +674,11 @@ for message in telegram.poll_updates(polling_interval=5):
         print(f'Audio File Size: {message.audio.file_size}')
 
     if message.photo:
-        telegram.download_attachment(message.photo.file_id, message.photo.file_unique_id, telegram.current_directory)
+        telegram.download_attachment(
+            message.photo.file_id,
+            message.photo.file_unique_id,
+            telegram.current_directory
+            )
 
         print(f'Photo File ID: {message.photo.file_id}')
         print(f'Photo File Unique ID: {message.photo.file_unique_id}')
@@ -338,7 +687,11 @@ for message in telegram.poll_updates(polling_interval=5):
         print(f'Photo Height: {message.photo.height}')
 
     if message.voice:
-        telegram.download_attachment(message.voice.file_id, message.voice.file_unique_id, telegram.current_directory)
+        telegram.download_attachment(
+            message.voice.file_id,
+            message.voice.file_unique_id,
+            telegram.current_directory
+            )
 
         print(f'Voice Duration: {message.voice.duration}')
         print(f'Voice Mime Type: {message.voice.mime_type}')
@@ -357,4 +710,56 @@ for message in telegram.poll_updates(polling_interval=5):
         print(f'Location Live Period: {message.location.live_period}')
         print(f'Location Heading: {message.location.heading}')
         print(f'Location Horizontal Accuracy: {message.location.horizontal_accuracy}')
+
+    # Everything Telegram sent, including fields this library does not parse yet.
+    print(f'Raw message: {message.raw_message}')
+    print(f'Raw update: {message.raw}')
+```
+
+## Webhooks
+```python
+telegram.set_webhook(
+    url = 'https://example.com/webhook',
+    certificate = '/path/to/certificate.pem',
+    allowed_updates = ['message', 'callback_query'],
+    secret_token = 'your-secret-token',
+    max_connections = 40,
+    drop_pending_updates = False
+    )
+
+print(telegram.get_webhook_info())
+
+telegram.delete_webhook(drop_pending_updates = True)
+```
+
+The `certificate` parameter accepts a path, bytes, or an open file object. When uploading from memory, use `certificate_file_name` to choose the name.  
+A webhook and `poll_updates` cannot be used at the same time; call `delete_webhook()` before switching back to polling.
+
+## Errors
+All Telegram errors are raised as exceptions:
+
+```python
+from TelegramAPI import TelegramAPI, TelegramAPIError, TelegramNetworkError, TelegramTimeoutError
+
+telegram = TelegramAPI('Enter your bot token here.')
+
+try:
+    telegram.send_message(chat_id = 'Your ID here', text = 'Hello!')
+except TelegramAPIError as error:
+    print(f'Method: {error.method}')
+    print(f'Error code: {error.error_code}')
+    print(f'Description: {error.description}')
+    print(f'Parameters: {error.parameters}')
+```
+
+`TelegramTimeoutError` is a subclass of `TelegramNetworkError`, which is a subclass of `TelegramAPIError`.  
+Rate-limited requests (`429`) are retried automatically up to `max_flood_retries` times, respecting Telegram's `retry_after` value. Upload streams are rewound before a retry; a non-seekable stream is not retried with empty data.
+
+## Helper methods
+```python
+telegram.is_url('https://example.com')  # True
+telegram.is_url('/path/to/file')        # False
+
+print(telegram.convert_timestamp(message.date))
+# Output: '23/02/2022 10:19:00'
 ```

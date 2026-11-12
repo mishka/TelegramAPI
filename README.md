@@ -1,3 +1,5 @@
+# [You can access the documentation through mintlify here. It's a lot more readable and organized.](https://n-a-818b4087.mintlify.site/)
+
 # Welcome!
 You can run a Telegram bot, get all the message data in a parsed way, download any attachments, and send messages and attachments using this library.  
 
